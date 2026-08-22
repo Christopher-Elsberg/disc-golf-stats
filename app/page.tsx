@@ -233,7 +233,7 @@ function AuthScreen() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Minimum 6 tegn"
-              minLength={6}
+              minLength={0}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               required
             />
