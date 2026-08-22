@@ -465,6 +465,7 @@ export default function HomePage() {
       return;
     }
 
+    const userId = session.user.id;
     let cancelled = false;
 
     async function loadCurrentPlayer() {
@@ -474,7 +475,7 @@ export default function HomePage() {
       const { data, error: playerError } = await supabase
         .from("players")
         .select("id,name")
-        .eq("auth_user_id", session.user.id)
+        .eq("auth_user_id", userId)
         .maybeSingle();
 
       if (cancelled) return;
