@@ -1477,3 +1477,402 @@ select:focus-visible {
     grid-column: 2 / -1;
   }
 }
+/* =========================================================
+   RESPONSIVE / MOBILE
+   ========================================================= */
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.app-shell {
+  width: 100%;
+  min-width: 0;
+}
+
+.main-content {
+  min-width: 0;
+  width: 100%;
+}
+
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-scroll .stats-table {
+  min-width: 650px;
+}
+
+
+/* =========================================================
+   IMAGES / SVG / CHARTS
+   ========================================================= */
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+svg {
+  height: auto;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  /* -------------------------
+     SIDEBAR
+     ------------------------- */
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    width: min(84vw, 320px);
+    height: 100dvh;
+
+    z-index: 1000;
+
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+
+    overflow-y: auto;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+
+    border: 0;
+    padding: 0;
+
+    background: rgba(0, 0, 0, 0.45);
+
+    z-index: 999;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 44px;
+    height: 44px;
+
+    flex: 0 0 auto;
+  }
+
+
+  /* -------------------------
+     MAIN
+     ------------------------- */
+
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+
+
+  /* -------------------------
+     HEADER
+     ------------------------- */
+
+  .topbar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 14px;
+
+    padding: 16px;
+  }
+
+  .topbar-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    min-width: 0;
+  }
+
+  .topbar-title > div {
+    min-width: 0;
+  }
+
+  .topbar h1 {
+    font-size: 1.55rem;
+    line-height: 1.15;
+
+    overflow-wrap: anywhere;
+  }
+
+
+  /* -------------------------
+     FILTERS
+     ------------------------- */
+
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+
+    width: 100%;
+  }
+
+  .filters label {
+    min-width: 0;
+  }
+
+  .filters select {
+    width: 100%;
+    max-width: 100%;
+    min-height: 44px;
+  }
+
+
+  /* -------------------------
+     CONTENT
+     ------------------------- */
+
+  .content-stack {
+    width: 100%;
+    max-width: 100%;
+
+    gap: 14px;
+
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 24px;
+  }
+
+
+  /* -------------------------
+     PANELS
+     ------------------------- */
+
+  .panel {
+    width: 100%;
+    max-width: 100%;
+
+    padding: 16px;
+
+    border-radius: 16px;
+
+    overflow: hidden;
+  }
+
+  .panel-heading {
+    margin-bottom: 14px;
+  }
+
+  .panel-heading h2 {
+    font-size: 1.15rem;
+  }
+
+  .panel-heading p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+
+  /* -------------------------
+     KPI CARDS
+     ------------------------- */
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+  }
+
+  .kpi-card {
+    min-width: 0;
+    padding: 14px;
+  }
+
+  .kpi-card strong {
+    font-size: 1.55rem;
+    overflow-wrap: anywhere;
+  }
+
+  .kpi-card small {
+    font-size: 0.75rem;
+  }
+
+
+  /* -------------------------
+     BEST ROUND CARDS
+     ------------------------- */
+
+  .best-round-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+
+    gap: 10px;
+  }
+
+  .best-round-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+
+  /* -------------------------
+     FORMULA GRID
+     ------------------------- */
+
+  .formula-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  /* -------------------------
+     TABLES
+     ------------------------- */
+
+  .table-scroll {
+    margin-left: -4px;
+    margin-right: -4px;
+    padding-bottom: 4px;
+  }
+
+  .stats-table {
+    font-size: 0.82rem;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 10px 8px;
+    white-space: nowrap;
+  }
+
+
+  /* -------------------------
+     ALERTS
+     ------------------------- */
+
+  .warning-banner,
+  .error-banner {
+    margin-left: 12px;
+    margin-right: 12px;
+
+    padding: 12px 14px;
+
+    border-radius: 12px;
+  }
+
+
+  /* -------------------------
+     FORMS / INPUTS
+     ------------------------- */
+
+  input,
+  select,
+  button,
+  textarea {
+    font-size: 16px;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  button,
+  select,
+  input {
+    min-height: 44px;
+  }
+
+
+  /* -------------------------
+     LOGIN
+     ------------------------- */
+
+  .auth-shell,
+  .login-page {
+    padding: 16px;
+  }
+
+  .auth-card,
+  .login-box {
+    width: 100%;
+    max-width: 440px;
+  }
+}
+
+
+/* =========================================================
+   SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+  .topbar {
+    padding: 12px;
+  }
+
+  .content-stack {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .panel {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .kpi-card {
+    padding: 12px;
+  }
+
+  .kpi-card strong {
+    font-size: 1.35rem;
+  }
+
+  .table-scroll .stats-table {
+    min-width: 600px;
+  }
+}
