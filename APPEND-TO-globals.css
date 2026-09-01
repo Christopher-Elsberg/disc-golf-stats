@@ -1,0 +1,58 @@
+/* =========================================================
+   OFFLINE / SYNC STATUS
+   Tilføj dette nederst i app/globals.css
+   ========================================================= */
+
+.connection-banner {
+  margin: 10px 22px 0;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.84rem;
+}
+
+.connection-banner strong {
+  font-weight: 900;
+}
+
+.connection-banner span {
+  opacity: 0.9;
+}
+
+.connection-banner.offline {
+  background: #fff4cf;
+  border-color: #ead27b;
+  color: #684f00;
+}
+
+.connection-banner.pending {
+  background: #e8f0ff;
+  border-color: #aac2f4;
+  color: #173a76;
+}
+
+.connection-banner.syncing {
+  background: #e3f5ee;
+  border-color: #9dceb9;
+  color: #174c38;
+}
+
+.connection-banner.synced {
+  background: #edf8ef;
+  border-color: #afd6b6;
+  color: #24502d;
+}
+
+@media (max-width: 768px) {
+  .connection-banner {
+    margin: 7px 8px 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 0.74rem;
+    gap: 5px 8px;
+  }
+}
