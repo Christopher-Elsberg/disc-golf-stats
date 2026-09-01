@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { savePendingRound, type PendingRound } from "@/lib/offline-rounds";
 
 type PlayerOption = {
   id: string;
@@ -29,10 +30,12 @@ type DraftHole = CourseHole & {
 
 type Props = {
   currentUserId: string;
-  onSaved: () => void;
+  onQueued: () => void;
 };
 
 const NEW_COURSE = "__new_course__";
+const SETUP_CACHE_KEY = "disc-golf-setup-cache-v1";
+const HOLES_CACHE_PREFIX = "disc-golf-course-holes-v1:";
 
 function localDateString() {
   const now = new Date();
@@ -55,16 +58,53 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+    .slice(0, 50);
 }
 
-export default function NewRoundView({ currentUserId, onSaved }: Props) {
+function readSetupCache(): { players: PlayerOption[]; courses: CourseOption[] } | null {
+  try {
+    const raw = window.localStorage.getItem(SETUP_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { players: PlayerOption[]; courses: CourseOption[] };
+  } catch {
+    return null;
+  }
+}
+
+function writeSetupCache(players: PlayerOption[], courses: CourseOption[]) {
+  try {
+    window.localStorage.setItem(SETUP_CACHE_KEY, JSON.stringify({ players, courses }));
+  } catch {
+    // Cache is helpful, but the live app should still work if storage is unavailable.
+  }
+}
+
+function readHolesCache(courseId: string): CourseHole[] | null {
+  try {
+    const raw = window.localStorage.getItem(`${HOLES_CACHE_PREFIX}${courseId}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as CourseHole[];
+  } catch {
+    return null;
+  }
+}
+
+function writeHolesCache(courseId: string, holes: CourseHole[]) {
+  try {
+    window.localStorage.setItem(`${HOLES_CACHE_PREFIX}${courseId}`, JSON.stringify(holes));
+  } catch {
+    // Ignore cache failures.
+  }
+}
+
+export default function NewRoundView({ currentUserId, onQueued }: Props) {
   const [players, setPlayers] = useState<PlayerOption[]>([]);
   const [courses, setCourses] = useState<CourseOption[]>([]);
   const [holes, setHoles] = useState<CourseHole[]>([]);
   const [draftHoles, setDraftHoles] = useState<DraftHole[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [courseId, setCourseId] = useState("");
+  const [newCourseLocalId, setNewCourseLocalId] = useState<string | null>(null);
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseLocation, setNewCourseLocation] = useState("");
   const [playedOn, setPlayedOn] = useState(localDateString());
@@ -99,14 +139,20 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
 
       if (cancelled) return;
 
-      if (playersResult.error) {
-        setError(`Kunne ikke hente spillere: ${playersResult.error.message}`);
-        setLoadingSetup(false);
-        return;
-      }
+      if (playersResult.error || coursesResult.error) {
+        const cached = readSetupCache();
+        if (!cached) {
+          const message = playersResult.error?.message ?? coursesResult.error?.message ?? "Ukendt fejl";
+          setError(`Kunne ikke hente spillere og baner, og der findes ingen offline-cache: ${message}`);
+          setLoadingSetup(false);
+          return;
+        }
 
-      if (coursesResult.error) {
-        setError(`Kunne ikke hente baner: ${coursesResult.error.message}`);
+        setPlayers(cached.players);
+        setCourses(cached.courses);
+        const me = cached.players.find((player) => player.auth_user_id === currentUserId);
+        if (me) setSelectedPlayers([me.id]);
+        setCourseId(cached.courses[0]?.id ?? NEW_COURSE);
         setLoadingSetup(false);
         return;
       }
@@ -116,15 +162,11 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
 
       setPlayers(playerRows);
       setCourses(courseRows);
+      writeSetupCache(playerRows, courseRows);
 
       const me = playerRows.find((player) => player.auth_user_id === currentUserId);
       if (me) setSelectedPlayers([me.id]);
-      if (courseRows[0]) {
-        setCourseId(courseRows[0].id);
-      } else {
-        setCourseId(NEW_COURSE);
-      }
-
+      setCourseId(courseRows[0]?.id ?? NEW_COURSE);
       setLoadingSetup(false);
     }
 
@@ -134,6 +176,11 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
       cancelled = true;
     };
   }, [currentUserId]);
+
+  useEffect(() => {
+    if (!isNewCourse) return;
+    if (!newCourseLocalId) setNewCourseLocalId(crypto.randomUUID());
+  }, [isNewCourse, newCourseLocalId]);
 
   useEffect(() => {
     if (!courseId || isNewCourse) {
@@ -159,10 +206,18 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
       if (cancelled) return;
 
       if (holesError) {
-        setError(`Kunne ikke hente banens huller: ${holesError.message}`);
-        setHoles([]);
+        const cached = readHolesCache(courseId);
+        if (cached) {
+          setHoles(cached);
+          setScores({});
+        } else {
+          setError(`Kunne ikke hente banens huller, og de findes ikke i offline-cache: ${holesError.message}`);
+          setHoles([]);
+        }
       } else {
-        setHoles((data ?? []) as CourseHole[]);
+        const rows = (data ?? []) as CourseHole[];
+        setHoles(rows);
+        writeHolesCache(courseId, rows);
         setScores({});
       }
 
@@ -209,6 +264,17 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
     return result;
   }, [roundHoles, scores, selectedPlayerRows]);
 
+  function handleCourseChange(value: string) {
+    setCourseId(value);
+    setScores({});
+    setError("");
+    setSuccess("");
+
+    if (value === NEW_COURSE && !newCourseLocalId) {
+      setNewCourseLocalId(crypto.randomUUID());
+    }
+  }
+
   function togglePlayer(playerId: string) {
     setSuccess("");
     setError("");
@@ -238,8 +304,9 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
       .map((hole) => Number(hole.hole_label))
       .filter((value) => Number.isInteger(value) && value > 0);
     const nextDefaultLabel = numericLabels.length > 0 ? Math.max(...numericLabels) + 1 : 1;
+
     const newHole: DraftHole = {
-      id: `draft-hole-${crypto.randomUUID()}`,
+      id: crypto.randomUUID(),
       score_index: nextOrder,
       hole_label: String(nextDefaultLabel),
       display_order: nextOrder,
@@ -287,17 +354,17 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
   }
 
   function validateRound() {
-    if (!courseId) return "Vælg en bane.";
-    if (!playedOn) return "Vælg en dato.";
-    if (selectedPlayerRows.length === 0) return "Vælg mindst én spiller.";
+    if (!courseId) return "V√¶lg en bane.";
+    if (!playedOn) return "V√¶lg en dato.";
+    if (selectedPlayerRows.length === 0) return "V√¶lg mindst √©n spiller.";
 
     if (isNewCourse) {
-      if (!newCourseName.trim()) return "Skriv navnet på den nye bane.";
-      if (!newCourseLocation.trim()) return "Skriv lokationen på den nye bane.";
-      if (draftHoles.length === 0) return "Tilføj mindst ét hul til den nye bane.";
+      if (!newCourseName.trim()) return "Skriv navnet p√• den nye bane.";
+      if (!newCourseLocation.trim()) return "Skriv lokationen p√• den nye bane.";
+      if (draftHoles.length === 0) return "Tilf√∏j mindst √©t hul til den nye bane.";
       if (draftHoles.some((hole) => !hole.hole_label.trim())) return "Alle huller skal have et navn/nummer.";
       const labels = draftHoles.map((hole) => hole.hole_label.trim().toLowerCase());
-      if (new Set(labels).size !== labels.length) return "Hulnavne skal være unikke på banen.";
+      if (new Set(labels).size !== labels.length) return "Hulnavne skal v√¶re unikke p√• banen.";
     } else if (holes.length === 0) {
       return "Den valgte bane har ingen registrerede huller.";
     }
@@ -307,71 +374,12 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
         const raw = scores[player.id]?.[hole.id] ?? "";
         const value = Number(raw);
         if (raw === "" || !Number.isInteger(value) || value < 1 || value > 99) {
-          return `Indtast en gyldig score på alle huller for ${player.name}.`;
+          return `Indtast en gyldig score p√• alle huller for ${player.name}.`;
         }
       }
     }
 
     return null;
-  }
-
-  async function createCourseAndHoles() {
-    const baseSlug = slugify(`${newCourseName}-${newCourseLocation}`) || "disc-golf-bane";
-    let slug = baseSlug;
-
-    const { data: existingSlug } = await supabase
-      .from("courses")
-      .select("id")
-      .eq("slug", slug)
-      .maybeSingle();
-
-    if (existingSlug) {
-      slug = `${baseSlug}-${Date.now().toString(36)}`;
-    }
-
-    const { data: newCourse, error: courseError } = await supabase
-      .from("courses")
-      .insert({
-        name: newCourseName.trim(),
-        location: newCourseLocation.trim(),
-        slug,
-      })
-      .select("id,name,location")
-      .single();
-
-    if (courseError) throw courseError;
-    if (!newCourse) throw new Error("Den nye bane blev ikke oprettet korrekt.");
-
-    const holeRows = draftHoles.map((hole, index) => ({
-      course_id: newCourse.id,
-      score_index: index + 1,
-      hole_label: hole.hole_label.trim(),
-      display_order: index + 1,
-      par: hole.par,
-    }));
-
-    const { data: createdHoles, error: holeError } = await supabase
-      .from("course_holes")
-      .insert(holeRows)
-      .select("id,score_index,hole_label,display_order,par");
-
-    if (holeError) throw holeError;
-    if (!createdHoles || createdHoles.length !== draftHoles.length) {
-      throw new Error("Banen blev oprettet, men ikke alle huller blev gemt.");
-    }
-
-    const holeIdMap = new Map<number, string>();
-    for (const hole of createdHoles as CourseHole[]) {
-      holeIdMap.set(hole.score_index, hole.id);
-    }
-
-    return {
-      course: newCourse as CourseOption,
-      holes: draftHoles.map((draftHole, index) => ({
-        ...draftHole,
-        id: holeIdMap.get(index + 1) ?? draftHole.id,
-      })) as CourseHole[],
-    };
   }
 
   async function saveRound() {
@@ -385,84 +393,64 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
     }
 
     setSaving(true);
-    let newRoundId: string | null = null;
 
     try {
-      let finalCourseId = courseId;
-      let finalHoles = roundHoles;
-      let createdCourse: CourseOption | null = null;
+      const roundId = crypto.randomUUID();
 
-      if (isNewCourse) {
-        const created = await createCourseAndHoles();
-        finalCourseId = created.course.id;
-        createdCourse = created.course;
-        finalHoles = created.holes;
-      }
+      const course = isNewCourse
+        ? (() => {
+            const localCourseId = newCourseLocalId ?? crypto.randomUUID();
+            if (!newCourseLocalId) setNewCourseLocalId(localCourseId);
+            const baseSlug = slugify(`${newCourseName}-${newCourseLocation}`) || "disc-golf-bane";
 
-      const { data: newRound, error: roundError } = await supabase
-        .from("rounds")
-        .insert({
-          course_id: finalCourseId,
-          played_on: playedOn,
-        })
-        .select("id,round_number")
-        .single();
-
-      if (roundError) throw roundError;
-      if (!newRound) throw new Error("Runden blev ikke oprettet korrekt.");
-
-      newRoundId = newRound.id as string;
-
-      const participantRows = selectedPlayerRows.map((player) => ({
-        round_id: newRoundId,
-        player_id: player.id,
-      }));
-
-      const { error: playerInsertError } = await supabase
-        .from("round_players")
-        .insert(participantRows);
-
-      if (playerInsertError) throw playerInsertError;
-
-      const persistedIdByOrder = new Map<number, string>();
-      finalHoles.forEach((hole) => persistedIdByOrder.set(hole.display_order, hole.id));
-
-      const scoreRows = selectedPlayerRows.flatMap((player) =>
-        roundHoles.map((originalHole) => {
-          const persistedHoleId = persistedIdByOrder.get(originalHole.display_order);
-          if (!persistedHoleId) throw new Error("Kunne ikke koble en score til det oprettede hul.");
-          return {
-            round_id: newRoundId,
-            player_id: player.id,
-            course_hole_id: persistedHoleId,
-            strokes: Number(scores[player.id][originalHole.id]),
+            return {
+              type: "new" as const,
+              id: localCourseId,
+              name: newCourseName.trim(),
+              slug: `${baseSlug}-${localCourseId.slice(0, 8)}`,
+              location: newCourseLocation.trim() || null,
+              holes: draftHoles.map((hole, index) => ({
+                id: hole.id,
+                score_index: index + 1,
+                hole_label: hole.hole_label.trim(),
+                display_order: index + 1,
+                par: hole.par,
+              })),
+            };
+          })()
+        : {
+            type: "existing" as const,
+            id: courseId,
           };
-        }),
-      );
 
-      const { error: scoreInsertError } = await supabase.from("hole_scores").insert(scoreRows);
-      if (scoreInsertError) throw scoreInsertError;
+      const pendingRound: PendingRound = {
+        id: roundId,
+        auth_user_id: currentUserId,
+        played_on: playedOn,
+        course,
+        player_ids: selectedPlayerRows.map((player) => player.id),
+        scores: selectedPlayerRows.flatMap((player) =>
+          roundHoles.map((hole) => ({
+            player_id: player.id,
+            course_hole_id: hole.id,
+            strokes: Number(scores[player.id][hole.id]),
+          })),
+        ),
+        created_at: new Date().toISOString(),
+        status: "pending",
+      };
 
-      if (createdCourse) {
-        setCourses((current) =>
-          [...current, createdCourse as CourseOption].sort((a, b) => a.name.localeCompare(b.name, "da")),
-        );
-        setCourseId(createdCourse.id);
-        setNewCourseName("");
-        setNewCourseLocation("");
-        setDraftHoles([]);
-      }
+      await savePendingRound(pendingRound);
+      setScores({});
+      onQueued();
 
       setSuccess(
-        `Runde ${newRound.round_number} er gemt med ${selectedPlayerRows.length} spiller${selectedPlayerRows.length === 1 ? "" : "e"}.`,
+        navigator.onLine
+          ? "Runden er gemt sikkert p√• telefonen og synkroniseres automatisk med Supabase."
+          : "Runden er gemt sikkert p√• telefonen og afventer synkronisering, n√•r forbindelsen kommer tilbage.",
       );
-      setScores({});
-      onSaved();
     } catch (err) {
-      if (newRoundId) {
-        await supabase.from("rounds").delete().eq("id", newRoundId);
-      }
-      setError(err instanceof Error ? err.message : "Kunne ikke gemme runden.");
+      setError(err instanceof Error ? err.message : "Kunne ikke gemme runden lokalt.");
     } finally {
       setSaving(false);
     }
@@ -472,7 +460,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
     return (
       <section className="panel new-round-loading">
         <div className="spinner" />
-        <p>Henter spillere og baner…</p>
+        <p>Henter spillere og baner‚Ä¶</p>
       </section>
     );
   }
@@ -483,20 +471,20 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
         <div className="panel-heading">
           <div>
             <h2>Opret ny runde</h2>
-            <p>Vælg en eksisterende bane eller opret en ny bane, mens I spiller.</p>
+            <p>V√¶lg en eksisterende bane eller opret en ny bane, mens I spiller.</p>
           </div>
         </div>
 
         <div className="round-setup-grid">
           <label className="round-field">
             <span>Bane</span>
-            <select value={courseId} onChange={(event) => setCourseId(event.target.value)}>
+            <select value={courseId} onChange={(event) => handleCourseChange(event.target.value)}>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>
-                  {course.name}{course.location ? ` · ${course.location}` : ""}
+                  {course.name}{course.location ? ` ¬∑ ${course.location}` : ""}
                 </option>
               ))}
-              <option value={NEW_COURSE}>＋ Ny bane</option>
+              <option value={NEW_COURSE}>Ôºã Ny bane</option>
             </select>
           </label>
 
@@ -514,10 +502,10 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
             <span>Baneinfo</span>
             <strong>
               {loadingHoles
-                ? "Henter…"
+                ? "Henter‚Ä¶"
                 : isNewCourse
-                  ? `${draftHoles.length} huller tilføjet · Par ${coursePar}`
-                  : `${holes.length} huller · Par ${coursePar}`}
+                  ? `${draftHoles.length} huller tilf√∏jet ¬∑ Par ${coursePar}`
+                  : `${holes.length} huller ¬∑ Par ${coursePar}`}
             </strong>
           </div>
         </div>
@@ -528,7 +516,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
               <div>
                 <span className="builder-eyebrow">Ny bane</span>
                 <h3>Opret banen under runden</h3>
-                <p>Tilføj et hul, når I når til det, og angiv hulnavn/nummer og par.</p>
+                <p>Tilf√∏j et hul, n√•r I n√•r til det, og angiv hulnavn/nummer og par.</p>
               </div>
             </div>
 
@@ -538,7 +526,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
                 <input
                   value={newCourseName}
                   onChange={(event) => setNewCourseName(event.target.value)}
-                  placeholder="Fx Østre Anlæg Disc Golf"
+                  placeholder="Fx √òstre Anl√¶g Disc Golf"
                 />
               </label>
 
@@ -554,7 +542,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
 
             <div className="draft-hole-list">
               {draftHoles.length === 0 ? (
-                <div className="draft-hole-empty">Ingen huller endnu. Tilføj første hul, når runden starter.</div>
+                <div className="draft-hole-empty">Ingen huller endnu. Tilf√∏j f√∏rste hul, n√•r runden starter.</div>
               ) : (
                 draftHoles.map((hole, index) => (
                   <div className="draft-hole-row" key={hole.id}>
@@ -564,7 +552,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
                       <input
                         value={hole.hole_label}
                         onChange={(event) => updateDraftHole(hole.id, "hole_label", event.target.value)}
-                        aria-label={`Navn på hul ${index + 1}`}
+                        aria-label={`Navn p√• hul ${index + 1}`}
                       />
                     </label>
                     <label>
@@ -572,7 +560,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
                       <select
                         value={hole.par}
                         onChange={(event) => updateDraftHole(hole.id, "par", event.target.value)}
-                        aria-label={`Par på hul ${hole.hole_label}`}
+                        aria-label={`Par p√• hul ${hole.hole_label}`}
                       >
                         {Array.from({ length: 8 }, (_, parIndex) => parIndex + 2).map((par) => (
                           <option key={par} value={par}>{par}</option>
@@ -593,7 +581,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
             </div>
 
             <button type="button" className="add-hole-button" onClick={addDraftHole}>
-              <span>＋</span> Tilføj næste hul
+              <span>Ôºã</span> Tilf√∏j n√¶ste hul
             </button>
           </div>
         ) : null}
@@ -604,7 +592,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
               <span>Spillere</span>
               <strong>{selectedPlayerRows.length} valgt</strong>
             </div>
-            <small>Klik på en spiller for at til- eller fravælge.</small>
+            <small>Klik p√• en spiller for at til- eller frav√¶lge.</small>
           </div>
 
           <div className="player-picker">
@@ -619,7 +607,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
                   onClick={() => togglePlayer(player.id)}
                   aria-pressed={selected}
                 >
-                  <span className="player-chip-check">{selected ? "✓" : "+"}</span>
+                  <span className="player-chip-check">{selected ? "‚úì" : "+"}</span>
                   <span>{player.name}</span>
                   {isMe ? <small>dig</small> : null}
                 </button>
@@ -630,7 +618,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
       </section>
 
       {error ? <div className="error-banner"><strong>Kan ikke gemme runden</strong><span>{error}</span></div> : null}
-      {success ? <div className="success-banner"><strong>Runden er gemt</strong><span>{success}</span></div> : null}
+      {success ? <div className="success-banner"><strong>Runden er sikret</strong><span>{success}</span></div> : null}
 
       <section className="panel score-entry-panel">
         <div className="panel-heading score-entry-heading">
@@ -638,20 +626,20 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
             <h2>Scorekort</h2>
             <p>
               {isNewCourse
-                ? "Når du tilføjer et nyt hul ovenfor, dukker det straks op her."
-                : "Indtast antal kast på hvert hul. Total og score mod par beregnes automatisk."}
+                ? "N√•r du tilf√∏jer et nyt hul ovenfor, dukker det straks op her."
+                : "Indtast antal kast p√• hvert hul. Total og score mod par beregnes automatisk."}
             </p>
           </div>
-          <div className="round-par-badge">Par {coursePar || "–"}</div>
+          <div className="round-par-badge">Par {coursePar || "‚Äì"}</div>
         </div>
 
         {selectedPlayerRows.length === 0 ? (
-          <div className="empty-state">Vælg mindst én spiller ovenfor.</div>
+          <div className="empty-state">V√¶lg mindst √©n spiller ovenfor.</div>
         ) : loadingHoles ? (
-          <div className="new-round-loading inline-loading"><div className="spinner" /><p>Henter huller…</p></div>
+          <div className="new-round-loading inline-loading"><div className="spinner" /><p>Henter huller‚Ä¶</p></div>
         ) : roundHoles.length === 0 ? (
           <div className="empty-state">
-            {isNewCourse ? "Tilføj første hul til den nye bane ovenfor." : "Den valgte bane har ingen registrerede huller."}
+            {isNewCourse ? "Tilf√∏j f√∏rste hul til den nye bane ovenfor." : "Den valgte bane har ingen registrerede huller."}
           </div>
         ) : (
           <div className="table-scroll score-entry-scroll">
@@ -705,9 +693,9 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
                     const complete = totals[player.id]?.complete ?? false;
                     return (
                       <td key={player.id}>
-                        <strong>{complete ? total : "–"}</strong>
+                        <strong>{complete ? total : "‚Äì"}</strong>
                         <span className="to-par-inline">
-                          {complete ? toParLabel(total - coursePar) : "ufuldstændig"}
+                          {complete ? toParLabel(total - coursePar) : "ufuldst√¶ndig"}
                         </span>
                       </td>
                     );
@@ -721,7 +709,7 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
         <div className="round-save-bar">
           <div>
             <strong>{selectedPlayerRows.length} spiller{selectedPlayerRows.length === 1 ? "" : "e"}</strong>
-            <span>{roundHoles.length} huller · {playedOn || "ingen dato"}</span>
+            <span>{roundHoles.length} huller ¬∑ {playedOn || "ingen dato"}</span>
           </div>
           <button
             type="button"
@@ -729,10 +717,11 @@ export default function NewRoundView({ currentUserId, onSaved }: Props) {
             onClick={saveRound}
             disabled={saving || loadingHoles || selectedPlayerRows.length === 0 || roundHoles.length === 0}
           >
-            {saving ? (isNewCourse ? "Opretter bane og runde…" : "Gemmer runde…") : (isNewCourse ? "Gem ny bane + runde" : "Gem runde")}
+            {saving ? "Gemmer sikkert‚Ä¶" : isNewCourse ? "Gem ny bane + runde" : "Gem runde"}
           </button>
         </div>
       </section>
     </div>
   );
 }
+
