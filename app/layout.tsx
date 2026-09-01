@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import ServiceWorkerRegister from "./service-worker-register";
 
 export const metadata: Metadata = {
   title: "Disc Golf Stats",
   description: "Disc golf scorecards, rating, handicap og statistik",
   applicationName: "Disc Golf Stats",
   manifest: "/manifest.webmanifest",
+
   appleWebApp: {
     capable: true,
     title: "Disc Golf Stats",
@@ -26,7 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="da">
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegister />
+      </body>
     </html>
   );
 }
