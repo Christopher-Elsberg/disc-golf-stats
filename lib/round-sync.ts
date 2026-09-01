@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase";
-
 import {
   deletePendingRound,
   getPendingRounds,
@@ -7,182 +6,103 @@ import {
   type PendingRound,
 } from "@/lib/offline-rounds";
 
-async function syncOneRound(
-  round: PendingRound,
-) {
-  let courseId = round.course.id;
-
-  // ---------------------------------
-  // NEW COURSE
-  // ---------------------------------
+async function syncOneRound(round: PendingRound): Promise<void> {
+  let finalCourseId = round.course.id;
 
   if (round.course.type === "new") {
-    const { error: courseError } =
-      await supabase
-        .from("courses")
-        .upsert(
-          {
-            id: round.course.id,
-            name: round.course.name,
-            slug: round.course.slug,
-            location:
-              round.course.location,
-          },
-          {
-            onConflict: "id",
-          },
-        );
+    const newCourse = round.course;
 
-    if (courseError) {
-      throw courseError;
-    }
+    const { error: courseError } = await supabase.from("courses").upsert(
+      {
+        id: newCourse.id,
+        name: newCourse.name,
+        slug: newCourse.slug,
+        location: newCourse.location,
+      },
+      { onConflict: "id" },
+    );
 
-    const holes =
-      round.course.holes.map((hole) => ({
+    if (courseError) throw courseError;
+
+    const { error: holesError } = await supabase.from("course_holes").upsert(
+      newCourse.holes.map((hole) => ({
         id: hole.id,
-        course_id: round.course.id,
-        score_index: hole.scoreIndex,
-        hole_label: hole.holeLabel,
-        display_order:
-          hole.displayOrder,
+        course_id: newCourse.id,
+        score_index: hole.score_index,
+        hole_label: hole.hole_label,
+        display_order: hole.display_order,
         par: hole.par,
-      }));
+      })),
+      { onConflict: "id" },
+    );
 
-    const { error: holesError } =
-      await supabase
-        .from("course_holes")
-        .upsert(
-          holes,
-          {
-            onConflict: "id",
-          },
-        );
-
-    if (holesError) {
-      throw holesError;
-    }
-
-    courseId = round.course.id;
+    if (holesError) throw holesError;
+    finalCourseId = newCourse.id;
   }
 
-  // ---------------------------------
-  // ROUND
-  // ---------------------------------
+  const { error: roundError } = await supabase.from("rounds").upsert(
+    {
+      id: round.id,
+      course_id: finalCourseId,
+      played_on: round.played_on,
+      created_by: round.auth_user_id,
+    },
+    { onConflict: "id" },
+  );
 
-  const { error: roundError } =
-    await supabase
-      .from("rounds")
-      .upsert(
-        {
-          id: round.id,
-          course_id: courseId,
-          played_on: round.playedOn,
-          created_by:
-            round.authUserId,
-        },
-        {
-          onConflict: "id",
-        },
-      );
+  if (roundError) throw roundError;
 
-  if (roundError) {
-    throw roundError;
-  }
-
-  // ---------------------------------
-  // PLAYERS
-  // ---------------------------------
-
-  const roundPlayers =
-    round.playerIds.map((playerId) => ({
+  const { error: playersError } = await supabase.from("round_players").upsert(
+    round.player_ids.map((playerId) => ({
       round_id: round.id,
       player_id: playerId,
-    }));
+    })),
+    { onConflict: "round_id,player_id" },
+  );
 
-  const { error: playersError } =
-    await supabase
-      .from("round_players")
-      .upsert(
-        roundPlayers,
-        {
-          onConflict:
-            "round_id,player_id",
-        },
-      );
+  if (playersError) throw playersError;
 
-  if (playersError) {
-    throw playersError;
-  }
-
-  // ---------------------------------
-  // SCORES
-  // ---------------------------------
-
-  const holeScores =
+  const { error: scoresError } = await supabase.from("hole_scores").upsert(
     round.scores.map((score) => ({
       round_id: round.id,
-      player_id: score.playerId,
-      course_hole_id:
-        score.courseHoleId,
+      player_id: score.player_id,
+      course_hole_id: score.course_hole_id,
       strokes: score.strokes,
-    }));
+    })),
+    { onConflict: "round_id,player_id,course_hole_id" },
+  );
 
-  const { error: scoresError } =
-    await supabase
-      .from("hole_scores")
-      .upsert(
-        holeScores,
-        {
-          onConflict:
-            "round_id,player_id,course_hole_id",
-        },
-      );
+  if (scoresError) throw scoresError;
 
-  if (scoresError) {
-    throw scoresError;
-  }
-
-  // Everything reached Supabase
   await deletePendingRound(round.id);
 }
 
-export async function syncPendingRounds(
-  authUserId: string,
-) {
-  const pending =
-    await getPendingRounds(authUserId);
+export type SyncResult = {
+  synced: number;
+  failed: number;
+  lastError: string | null;
+};
 
+export async function syncPendingRounds(authUserId: string): Promise<SyncResult> {
+  const pending = await getPendingRounds(authUserId);
   let synced = 0;
   let failed = 0;
+  let lastError: string | null = null;
 
   for (const round of pending) {
     try {
       await syncOneRound(round);
-      synced++;
+      synced += 1;
     } catch (error) {
-      failed++;
+      failed += 1;
+      lastError = error instanceof Error ? error.message : String(error);
+      await markPendingRoundError(round, lastError);
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : String(error);
-
-      await markPendingRoundError(
-        round,
-        message,
-      );
-
-      // Hvis nettet er væk igen,
-      // giver det ikke mening at spamme
-      // resten af køen.
-      if (!navigator.onLine) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
         break;
       }
     }
   }
 
-  return {
-    synced,
-    failed,
-  };
+  return { synced, failed, lastError };
 }

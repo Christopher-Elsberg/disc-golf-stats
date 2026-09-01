@@ -1,12 +1,4 @@
-export type OfflineCourseHole = {
-  id: string;
-  scoreIndex: number;
-  holeLabel: string;
-  displayOrder: number;
-  par: number;
-};
-
-export type OfflineCourse =
+export type PendingRoundCourse =
   | {
       type: "existing";
       id: string;
@@ -17,92 +9,67 @@ export type OfflineCourse =
       name: string;
       slug: string;
       location: string | null;
-      holes: OfflineCourseHole[];
+      holes: Array<{
+        id: string;
+        score_index: number;
+        hole_label: string;
+        display_order: number;
+        par: number;
+      }>;
     };
 
-export type OfflineScore = {
-  playerId: string;
-  courseHoleId: string;
+export type PendingRoundScore = {
+  player_id: string;
+  course_hole_id: string;
   strokes: number;
 };
 
 export type PendingRound = {
   id: string;
-  authUserId: string;
-
-  playedOn: string;
-
-  course: OfflineCourse;
-
-  playerIds: string[];
-
-  scores: OfflineScore[];
-
-  createdAt: string;
-
+  auth_user_id: string;
+  played_on: string;
+  course: PendingRoundCourse;
+  player_ids: string[];
+  scores: PendingRoundScore[];
+  created_at: string;
   status: "pending" | "error";
-
-  lastError?: string;
+  last_error?: string;
 };
 
 const DB_NAME = "disc-golf-stats";
 const DB_VERSION = 1;
-
 const STORE_NAME = "pending-rounds";
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(
-      DB_NAME,
-      DB_VERSION,
-    );
+    if (typeof window === "undefined" || !("indexedDB" in window)) {
+      reject(new Error("Denne browser understøtter ikke IndexedDB."));
+      return;
+    }
 
-    request.onerror = () => {
-      reject(request.error);
-    };
+    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject(request.error ?? new Error("Kunne ikke åbne offline-databasen."));
 
     request.onupgradeneeded = () => {
       const db = request.result;
-
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(
-          STORE_NAME,
-          {
-            keyPath: "id",
-          },
-        );
-
-        store.createIndex(
-          "authUserId",
-          "authUserId",
-          {
-            unique: false,
-          },
-        );
+        const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        store.createIndex("auth_user_id", "auth_user_id", { unique: false });
+        store.createIndex("created_at", "created_at", { unique: false });
       }
     };
 
-    request.onsuccess = () => {
-      resolve(request.result);
-    };
+    request.onsuccess = () => resolve(request.result);
   });
 }
 
-export async function savePendingRound(
-  round: PendingRound,
-) {
+export async function savePendingRound(round: PendingRound): Promise<void> {
   const db = await openDatabase();
 
-  return new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(
-      STORE_NAME,
-      "readwrite",
-    );
-
-    const store =
-      transaction.objectStore(STORE_NAME);
-
-    store.put(round);
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, "readwrite");
+    transaction.objectStore(STORE_NAME).put(round);
 
     transaction.oncomplete = () => {
       db.close();
@@ -110,66 +77,42 @@ export async function savePendingRound(
     };
 
     transaction.onerror = () => {
+      const error = transaction.error ?? new Error("Kunne ikke gemme runden lokalt.");
       db.close();
-      reject(transaction.error);
+      reject(error);
     };
   });
 }
 
-export async function getPendingRounds(
-  authUserId: string,
-): Promise<PendingRound[]> {
+export async function getPendingRounds(authUserId: string): Promise<PendingRound[]> {
   const db = await openDatabase();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      STORE_NAME,
-      "readonly",
-    );
-
-    const store =
-      transaction.objectStore(STORE_NAME);
-
-    const index =
-      store.index("authUserId");
-
-    const request =
-      index.getAll(authUserId);
+    const transaction = db.transaction(STORE_NAME, "readonly");
+    const request = transaction.objectStore(STORE_NAME).index("auth_user_id").getAll(authUserId);
 
     request.onsuccess = () => {
-      db.close();
-
-      const rounds =
-        request.result as PendingRound[];
-
-      rounds.sort((a, b) =>
-        a.createdAt.localeCompare(b.createdAt),
+      const rounds = (request.result as PendingRound[]).sort((a, b) =>
+        a.created_at.localeCompare(b.created_at),
       );
-
+      db.close();
       resolve(rounds);
     };
 
     request.onerror = () => {
+      const error = request.error ?? new Error("Kunne ikke læse offline-runder.");
       db.close();
-      reject(request.error);
+      reject(error);
     };
   });
 }
 
-export async function deletePendingRound(
-  id: string,
-) {
+export async function deletePendingRound(id: string): Promise<void> {
   const db = await openDatabase();
 
-  return new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(
-      STORE_NAME,
-      "readwrite",
-    );
-
-    transaction
-      .objectStore(STORE_NAME)
-      .delete(id);
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, "readwrite");
+    transaction.objectStore(STORE_NAME).delete(id);
 
     transaction.oncomplete = () => {
       db.close();
@@ -177,19 +120,17 @@ export async function deletePendingRound(
     };
 
     transaction.onerror = () => {
+      const error = transaction.error ?? new Error("Kunne ikke fjerne den synkroniserede runde lokalt.");
       db.close();
-      reject(transaction.error);
+      reject(error);
     };
   });
 }
 
-export async function markPendingRoundError(
-  round: PendingRound,
-  error: string,
-) {
+export async function markPendingRoundError(round: PendingRound, message: string): Promise<void> {
   await savePendingRound({
     ...round,
     status: "error",
-    lastError: error,
+    last_error: message,
   });
 }
