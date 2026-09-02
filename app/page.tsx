@@ -37,36 +37,36 @@ type AuthMode = "login" | "signup";
 
 const MENU: Array<{ id: View; label: string; icon: string }> = [
   { id: "newround", label: "Ny runde", icon: "+" },
-  { id: "mine", label: "Mine stats", icon: "üë§" },
-  { id: "overview", label: "Oversigt", icon: "‚óà" },
-  { id: "scorecards", label: "Sidste 5", icon: "‚ñ¶" },
-  { id: "headtohead", label: "Head-to-head", icon: "‚öî" },
-  { id: "shots", label: "Slagtyper", icon: "‚óé" },
-  { id: "frontback", label: "Front / Back", icon: "‚Üî" },
-  { id: "best", label: "Bedste runder", icon: "‚òÖ" },
-  { id: "holes", label: "Hulstatistik", icon: "‚õ≥" },
-  { id: "bestworst", label: "Bedst / V√¶rst", icon: "‚áÖ" },
-  { id: "rating", label: "Rating", icon: "‚Üó" },
+  { id: "mine", label: "Mine stats", icon: "\ud83d\udc64" },
+  { id: "overview", label: "Oversigt", icon: "\u25c8" },
+  { id: "scorecards", label: "Sidste 5", icon: "\u25a6" },
+  { id: "headtohead", label: "Head-to-head", icon: "\u2694" },
+  { id: "shots", label: "Slagtyper", icon: "\u25ce" },
+  { id: "frontback", label: "Front / Back", icon: "\u2194" },
+  { id: "best", label: "Bedste runder", icon: "\u2605" },
+  { id: "holes", label: "Hulstatistik", icon: "\u26f3" },
+  { id: "bestworst", label: "Bedst / V\u00e6rst", icon: "\u21c5" },
+  { id: "rating", label: "Rating", icon: "\u2197" },
 ];
 
 function formatNumber(value: number | null | undefined, digits = 1) {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "‚Äì";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "\u2013";
   return value.toFixed(digits).replace(".", ",");
 }
 
 function formatPercent(value: number | null | undefined) {
-  if (value === null || value === undefined) return "‚Äì";
+  if (value === null || value === undefined) return "\u2013";
   return `${formatNumber(value, 0)} %`;
 }
 
 function formatToPar(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "‚Äì";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "\u2013";
   if (value === 0) return "E";
   return value > 0 ? `+${formatNumber(value)}` : formatNumber(value);
 }
 
 function formatDate(value: string) {
-  if (!value) return "‚Äì";
+  if (!value) return "\u2013";
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return value;
   return new Intl.DateTimeFormat("da-DK", {
@@ -108,7 +108,7 @@ function LoadingScreen() {
   return (
     <main className="boot-screen">
       <div className="spinner" />
-      <p>Henter Disc Golf Stats‚Ä¶</p>
+      <p>Henter Disc Golf Stats&#x2026;</p>
     </main>
   );
 }
@@ -144,7 +144,7 @@ function AuthScreen() {
 
         if (!data.session) {
           setMessage(
-            "Bruger oprettet. Tjek din mail og bekr√¶ft kontoen, hvis email-bekr√¶ftelse er sl√•et til i Supabase.",
+            "Bruger oprettet. Tjek din mail og bekr\u00e6ft kontoen, hvis email-bekr\u00e6ftelse er sl\u00e5et til i Supabase.",
           );
         } else {
           setMessage("Bruger oprettet. Du er nu logget ind.");
@@ -178,7 +178,7 @@ function AuthScreen() {
           <span className="eyebrow">Bundgaardsparken & flere baner</span>
           <h1>Disc Golf Stats</h1>
           <p>
-            Scorecards, rating, handicap, head-to-head og hulstatistik samlet √©t sted.
+            Scorecards, rating, handicap, head-to-head og hulstatistik samlet &#xE9;t sted.
           </p>
         </div>
 
@@ -249,7 +249,7 @@ function AuthScreen() {
           {message ? <div className="form-message success">{message}</div> : null}
 
           <button className="primary-button auth-submit" type="submit" disabled={busy}>
-            {busy ? "Arbejder‚Ä¶" : mode === "login" ? "Log ind" : "Opret bruger"}
+            {busy ? "Arbejder\u2026" : mode === "login" ? "Log ind" : "Opret bruger"}
           </button>
         </form>
       </section>
@@ -373,7 +373,7 @@ function ScorecardTable({ scorecard }: { scorecard: Scorecard }) {
                 <td>{hole.par}</td>
                 {scorecard.players.map((player) => (
                   <td key={player.player_id}>
-                    {scoreLookup.get(`${player.player_id}:${hole.hole_id}`) ?? "‚Äì"}
+                    {scoreLookup.get(`${player.player_id}:${hole.hole_id}`) ?? "\u2013"}
                   </td>
                 ))}
               </tr>
@@ -423,7 +423,7 @@ function headToHeadCell(
 }
 
 function bestRoundLabel(item: BestRound) {
-  if (!item.best_round) return "‚Äì";
+  if (!item.best_round) return "\u2013";
   return `${item.best_round.total_strokes} (${formatToPar(item.best_round.score_to_par)})`;
 }
 
@@ -519,14 +519,14 @@ export default function HomePage() {
             `${result.synced} runde${result.synced === 1 ? "" : "r"} synkroniseret med Supabase.`,
           );
         } else if (result.failed > 0) {
-          setSyncMessage(result.lastError ?? "Synkronisering mislykkedes. Vi pr√∏ver igen senere.");
+          setSyncMessage(result.lastError ?? "Synkronisering mislykkedes. Vi pr\u00f8ver igen senere.");
         }
       } catch (syncError) {
         if (!cancelled) {
           setSyncMessage(
             syncError instanceof Error
               ? syncError.message
-              : "Kunne ikke kontrollere offline-k√∏en.",
+              : "Kunne ikke kontrollere offline-k\u00f8en.",
           );
         }
       } finally {
@@ -785,7 +785,7 @@ export default function HomePage() {
             <span>{session.user.email}</span>
           </div>
           <button type="button" className="logout-button" onClick={handleLogout} title="Log ud">
-            ‚Ü™
+            &#x21AA;
           </button>
         </div>
       </aside>
@@ -805,9 +805,9 @@ export default function HomePage() {
               type="button"
               className="mobile-menu-button"
               onClick={() => setMobileMenuOpen(true)}
-              aria-label="√Öbn menu"
+              aria-label={"\u00c5bn menu"}
             >
-              ‚ò∞
+              &#x2630;
             </button>
             <div>
               <span className="eyebrow">
@@ -824,9 +824,9 @@ export default function HomePage() {
           {view !== "newround" ? (
             <div className="filters">
               <label>
-                <span>S√¶son</span>
+                <span>S&#xE6;son</span>
                 <select value={season} onChange={(event) => setSeason(event.target.value)}>
-                  <option value="all">Alle s√¶soner</option>
+                  <option value="all">Alle s&#xE6;soner</option>
                   {(stats?.available_seasons ?? []).map((item) => (
                     <option key={item} value={item}>
                       {item}
@@ -852,16 +852,16 @@ export default function HomePage() {
 
         {!isOnline ? (
           <div className="connection-banner offline">
-            <strong>‚óè Offline</strong>
-            <span>Du kan stadig gemme runder. De bliver lagt i k√∏ p√• telefonen.</span>
+            <strong>&#x25CF; Offline</strong>
+            <span>Du kan stadig gemme runder. De bliver lagt i k&#xF8; p&#xE5; telefonen.</span>
           </div>
         ) : null}
 
         {pendingRoundCount > 0 || syncing ? (
           <div className={`connection-banner ${syncing ? "syncing" : "pending"}`}>
-            <strong>{syncing ? "Synkroniserer‚Ä¶" : "Afventer synkronisering"}</strong>
+            <strong>{syncing ? "Synkroniserer\u2026" : "Afventer synkronisering"}</strong>
             <span>
-              {pendingRoundCount} runde{pendingRoundCount === 1 ? "" : "r"} ligger sikkert p√• denne enhed.
+              {pendingRoundCount} runde{pendingRoundCount === 1 ? "" : "r"} ligger sikkert p&#xE5; denne enhed.
             </span>
           </div>
         ) : null}
@@ -893,8 +893,8 @@ export default function HomePage() {
           <div className={`content-stack ${loading ? "is-refreshing" : ""}`}>
             {stats.stats.incomplete_entries.length > 0 ? (
               <div className="warning-banner">
-                <strong>{stats.stats.incomplete_entries.length} ufuldst√¶ndige spiller-runder</strong>
-                <span>De er ikke medregnet i den f√¶rdige statistik.</span>
+                <strong>{stats.stats.incomplete_entries.length} ufuldst&#xE6;ndige spiller-runder</strong>
+                <span>De er ikke medregnet i den f&#xE6;rdige statistik.</span>
               </div>
             ) : null}
 
@@ -902,7 +902,7 @@ export default function HomePage() {
               <div className="content-stack">
                 {currentPlayerLoading ? (
                   <Panel title="Mine stats">
-                    <EmptyState>Finder din spillerprofil‚Ä¶</EmptyState>
+                    <EmptyState>Finder din spillerprofil&#x2026;</EmptyState>
                   </Panel>
                 ) : currentPlayerError ? (
                   <div className="error-banner">
@@ -915,11 +915,11 @@ export default function HomePage() {
                   </Panel>
                 ) : !myStats?.player ? (
                   <Panel
-                    title={`Mine stats ¬∑ ${currentPlayer.name}`}
+                    title={`Mine stats \u00b7 ${currentPlayer.name}`}
                     subtitle="De valgte filtre indeholder ingen komplette runder for dig."
                   >
                     <EmptyState>
-                      Pr√∏v en anden s√¶son eller bane, eller registrer en ny runde.
+                      Pr&#xF8;v en anden s&#xE6;son eller bane, eller registrer en ny runde.
                     </EmptyState>
                   </Panel>
                 ) : (
@@ -934,7 +934,7 @@ export default function HomePage() {
                       <article className="kpi-card">
                         <span>Handicap</span>
                         <strong>{formatNumber(myStats.player.handicap)}</strong>
-                        <small>baseret p√• seneste komplette runder</small>
+                        <small>baseret p&#xE5; seneste komplette runder</small>
                       </article>
 
                       <article className="kpi-card">
@@ -961,11 +961,11 @@ export default function HomePage() {
                       <article className="kpi-card">
                         <span>Gns. vs. par</span>
                         <strong>{formatToPar(myStats.player.average_score_to_par)}</strong>
-                        <small>p√• tv√¶rs af valgte baner</small>
+                        <small>p&#xE5; tv&#xE6;rs af valgte baner</small>
                       </article>
 
                       <article className="kpi-card">
-                        <span>Stabilitet œÉ</span>
+                        <span>Stabilitet &#x3C3;</span>
                         <strong>{formatNumber(myStats.player.consistency_sd_to_par)}</strong>
                         <small>lavere er mere stabilt</small>
                       </article>
@@ -1021,14 +1021,14 @@ export default function HomePage() {
                       <article className="best-round-card">
                         <span>Bedste runde</span>
                         <strong>
-                          {myStats.bestRound ? bestRoundLabel(myStats.bestRound) : "‚Äì"}
+                          {myStats.bestRound ? bestRoundLabel(myStats.bestRound) : "\u2013"}
                         </strong>
                         {myStats.bestRound?.best_round ? (
                           <>
                             <p>{myStats.bestRound.best_round.course_name}</p>
                             <small>
-                              Runde {myStats.bestRound.best_round.round_number} ¬∑{" "}
-                              {formatDate(myStats.bestRound.best_round.date)} ¬∑ rating{" "}
+                              Runde {myStats.bestRound.best_round.round_number} &#xB7;{" "}
+                              {formatDate(myStats.bestRound.best_round.date)} &#xB7; rating{" "}
                               {formatNumber(myStats.bestRound.best_round.rating, 0)}
                             </small>
                           </>
@@ -1114,7 +1114,7 @@ export default function HomePage() {
 
                     <Panel
                       title="Mit head-to-head"
-                      subtitle="Kun dine direkte m√∏der mod de andre spillere. Solo-runder t√¶ller ikke."
+                      subtitle={"Kun dine direkte m\u00f8der mod de andre spillere. Solo-runder t\u00e6ller ikke."}
                     >
                       {myStats.headToHead.length === 0 ? (
                         <EmptyState>Ingen head-to-head-runder i det valgte filter.</EmptyState>
@@ -1162,8 +1162,8 @@ export default function HomePage() {
                       return (
                         <Panel
                           key={course.course_id}
-                          title={`Min Front / Back ¬∑ ${course.course_name}`}
-                          subtitle="Gennemsnitlig score mod par p√• banens f√∏rste og sidste halvdel."
+                          title={`Min Front / Back \u00b7 ${course.course_name}`}
+                          subtitle={"Gennemsnitlig score mod par p\u00e5 banens f\u00f8rste og sidste halvdel."}
                         >
                           <div className="table-scroll">
                             <table className="stats-table">
@@ -1190,8 +1190,8 @@ export default function HomePage() {
                     })}
 
                     <Panel
-                      title="Mine bedste og v√¶rste huller"
-                      subtitle="Baseret p√• gennemsnitlig score mod par over dine seneste fem runder p√• hver bane."
+                      title={"Mine bedste og v\u00e6rste huller"}
+                      subtitle={"Baseret p\u00e5 gennemsnitlig score mod par over dine seneste fem runder p\u00e5 hver bane."}
                     >
                       {myStats.bestWorst.length === 0 ? (
                         <EmptyState>Ingen huldata i det valgte filter.</EmptyState>
@@ -1203,7 +1203,7 @@ export default function HomePage() {
                                 <th>Bane</th>
                                 <th>Bedste hul</th>
                                 <th>Gns. vs. par</th>
-                                <th>V√¶rste hul</th>
+                                <th>V&#xE6;rste hul</th>
                                 <th>Gns. vs. par</th>
                               </tr>
                             </thead>
@@ -1211,9 +1211,9 @@ export default function HomePage() {
                               {myStats.bestWorst.map((item) => (
                                 <tr key={item.course_id}>
                                   <th>{item.course_name}</th>
-                                  <td>{item.best_hole?.hole_label ?? "‚Äì"}</td>
+                                  <td>{item.best_hole?.hole_label ?? "\u2013"}</td>
                                   <td>{formatToPar(item.best_hole?.average_to_par)}</td>
-                                  <td>{item.worst_hole?.hole_label ?? "‚Äì"}</td>
+                                  <td>{item.worst_hole?.hole_label ?? "\u2013"}</td>
                                   <td>{formatToPar(item.worst_hole?.average_to_par)}</td>
                                 </tr>
                               ))}
@@ -1226,8 +1226,8 @@ export default function HomePage() {
                     {myStats.holeStats.map((course) => (
                       <Panel
                         key={course.course_id}
-                        title={`Mine hulstats ¬∑ ${course.course_name}`}
-                        subtitle="Gennemsnit fra dine seneste fem runder p√• banen samt din bedste score nogensinde."
+                        title={`Mine hulstats \u00b7 ${course.course_name}`}
+                        subtitle={"Gennemsnit fra dine seneste fem runder p\u00e5 banen samt din bedste score nogensinde."}
                       >
                         <div className="table-scroll">
                           <table className="stats-table hole-table">
@@ -1252,7 +1252,7 @@ export default function HomePage() {
                                     <td>{hole.par}</td>
                                     <td>{formatNumber(player.average_strokes_last_five)}</td>
                                     <td>{formatToPar(player.average_to_par_last_five)}</td>
-                                    <td>{player.best_strokes_all_time ?? "‚Äì"}</td>
+                                    <td>{player.best_strokes_all_time ?? "\u2013"}</td>
                                     <td>{player.last_five_samples}</td>
                                   </tr>
                                 );
@@ -1265,7 +1265,7 @@ export default function HomePage() {
 
                     <Panel
                       title="Min rating progression"
-                      subtitle="Din ratinghistorik f√∏lger round_number, s√• r√¶kkef√∏lgen er stabil selv for gamle importerede runder."
+                      subtitle={"Din ratinghistorik f\u00f8lger round_number, s\u00e5 r\u00e6kkef\u00f8lgen er stabil selv for gamle importerede runder."}
                     >
                       {myStats.ratingHistory ? (
                         <div className="chart-grid">
@@ -1303,7 +1303,7 @@ export default function HomePage() {
                     <strong>
                       {stats.stats.last_five_scorecards[0]
                         ? `#${stats.stats.last_five_scorecards[0].round_number}`
-                        : "‚Äì"}
+                        : "\u2013"}
                     </strong>
                     <small>
                       {stats.stats.last_five_scorecards[0]
@@ -1331,7 +1331,7 @@ export default function HomePage() {
                             <th>Gns. vs. par</th>
                             <th>Handicap</th>
                             <th>Rating</th>
-                            <th>Stabilitet œÉ</th>
+                            <th>Stabilitet &#x3C3;</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1362,7 +1362,7 @@ export default function HomePage() {
                   <div className="formula-grid">
                     <div>
                       <span>Rating</span>
-                      <strong>1000 + 8,4 √ó (-7 - score vs. par)</strong>
+                      <strong>1000 + 8,4 &#xD7; (-7 - score vs. par)</strong>
                     </div>
                     <div>
                       <span>Handicap</span>
@@ -1384,7 +1384,7 @@ export default function HomePage() {
             {view === "scorecards" ? (
               <Panel
                 title="De fem seneste scorecards"
-                subtitle="Sorteret efter round_number, s√• historiske Last Modified-datoer ikke √¶ndrer r√¶kkef√∏lgen."
+                subtitle={"Sorteret efter round_number, s\u00e5 historiske Last Modified-datoer ikke \u00e6ndrer r\u00e6kkef\u00f8lgen."}
               >
                 {stats.stats.last_five_scorecards.length === 0 ? (
                   <EmptyState>Ingen scorecards i det valgte filter.</EmptyState>
@@ -1401,7 +1401,7 @@ export default function HomePage() {
             {view === "headtohead" ? (
               <Panel
                 title="Head-to-head winrate"
-                subtitle="Solo-runder t√¶ller ikke i head-to-head. Laveste score vinder."
+                subtitle={"Solo-runder t\u00e6ller ikke i head-to-head. Laveste score vinder."}
               >
                 {playerStats.length === 0 ? (
                   <EmptyState>Ingen head-to-head-data.</EmptyState>
@@ -1424,7 +1424,7 @@ export default function HomePage() {
                               if (rowPlayer.player_id === columnPlayer.player_id) {
                                 return (
                                   <td className="matrix-diagonal" key={columnPlayer.player_id}>
-                                    ‚Äì
+                                    &#x2013;
                                   </td>
                                 );
                               }
@@ -1443,7 +1443,7 @@ export default function HomePage() {
                                       </span>
                                     </>
                                   ) : (
-                                    "‚Äì"
+                                    "\u2013"
                                   )}
                                 </td>
                               );
@@ -1513,8 +1513,8 @@ export default function HomePage() {
                   stats.stats.front_back.map((course) => (
                     <Panel
                       key={course.course_id}
-                      title={`Clutch or crumble ¬∑ ${course.course_name}`}
-                      subtitle="Gennemsnitlig score mod par p√• banens f√∏rste og sidste halvdel."
+                      title={`Clutch or crumble \u00b7 ${course.course_name}`}
+                      subtitle={"Gennemsnitlig score mod par p\u00e5 banens f\u00f8rste og sidste halvdel."}
                     >
                       <div className="table-scroll">
                         <table className="stats-table">
@@ -1555,7 +1555,7 @@ export default function HomePage() {
             {view === "best" ? (
               <Panel
                 title="Hver spillers bedste runde"
-                subtitle="Bedste score m√•lt mod par; laveste score bryder lighed."
+                subtitle={"Bedste score m\u00e5lt mod par; laveste score bryder lighed."}
               >
                 <div className="best-round-grid">
                   {stats.stats.best_rounds.map((item) => (
@@ -1566,7 +1566,7 @@ export default function HomePage() {
                         <>
                           <p>{item.best_round.course_name}</p>
                           <small>
-                            Runde {item.best_round.round_number} ¬∑ {formatDate(item.best_round.date)} ¬∑ rating {formatNumber(item.best_round.rating, 0)}
+                            Runde {item.best_round.round_number} &#xB7; {formatDate(item.best_round.date)} &#xB7; rating {formatNumber(item.best_round.rating, 0)}
                           </small>
                         </>
                       ) : (
@@ -1588,8 +1588,8 @@ export default function HomePage() {
                   stats.stats.hole_stats.map((course) => (
                     <Panel
                       key={course.course_id}
-                      title={`Hulgennemsnit ¬∑ ${course.course_name}`}
-                      subtitle="Hver celle viser gennemsnit af spillerens sidste 5 runder p√• banen / bedste score nogensinde."
+                      title={`Hulgennemsnit \u00b7 ${course.course_name}`}
+                      subtitle={"Hver celle viser gennemsnit af spillerens sidste 5 runder p\u00e5 banen / bedste score nogensinde."}
                     >
                       <div className="table-scroll">
                         <table className="stats-table hole-table">
@@ -1611,7 +1611,7 @@ export default function HomePage() {
                                   <td key={player.player_id}>
                                     <strong>{formatNumber(player.average_strokes_last_five)}</strong>
                                     <span className="muted-cell">
-                                      bedst {player.best_strokes_all_time ?? "‚Äì"}
+                                      bedst {player.best_strokes_all_time ?? "\u2013"}
                                     </span>
                                   </td>
                                 ))}
@@ -1628,8 +1628,8 @@ export default function HomePage() {
 
             {view === "bestworst" ? (
               <Panel
-                title="Bedste og v√¶rste hul"
-                subtitle="Baseret p√• gennemsnitlig score mod par over spillerens seneste fem runder p√• banen."
+                title={"Bedste og v\u00e6rste hul"}
+                subtitle={"Baseret p\u00e5 gennemsnitlig score mod par over spillerens seneste fem runder p\u00e5 banen."}
               >
                 <div className="table-scroll">
                   <table className="stats-table">
@@ -1639,7 +1639,7 @@ export default function HomePage() {
                         <th>Spiller</th>
                         <th>Bedste hul</th>
                         <th>Gns. vs. par</th>
-                        <th>V√¶rste hul</th>
+                        <th>V&#xE6;rste hul</th>
                         <th>Gns. vs. par</th>
                       </tr>
                     </thead>
@@ -1648,9 +1648,9 @@ export default function HomePage() {
                         <tr key={`${item.course_id}:${item.player_id}`}>
                           <td>{item.course_name}</td>
                           <th>{item.player_name}</th>
-                          <td>{item.best_hole?.hole_label ?? "‚Äì"}</td>
+                          <td>{item.best_hole?.hole_label ?? "\u2013"}</td>
                           <td>{formatToPar(item.best_hole?.average_to_par)}</td>
-                          <td>{item.worst_hole?.hole_label ?? "‚Äì"}</td>
+                          <td>{item.worst_hole?.hole_label ?? "\u2013"}</td>
                           <td>{formatToPar(item.worst_hole?.average_to_par)}</td>
                         </tr>
                       ))}
@@ -1663,7 +1663,7 @@ export default function HomePage() {
             {view === "rating" ? (
               <Panel
                 title="Rating progression"
-                subtitle="Historikken f√∏lger round_number, s√• runde 1 ‚Üí 2 ‚Üí 3 altid er den rigtige r√¶kkef√∏lge."
+                subtitle={"Historikken f\u00f8lger round_number, s\u00e5 runde 1 \u2192 2 \u2192 3 altid er den rigtige r\u00e6kkef\u00f8lge."}
               >
                 <div className="chart-grid">
                   {stats.stats.rating_history.map((item) => (
