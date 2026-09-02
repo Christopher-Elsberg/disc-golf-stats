@@ -354,17 +354,17 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
   }
 
   function validateRound() {
-    if (!courseId) return "V√¶lg en bane.";
-    if (!playedOn) return "V√¶lg en dato.";
-    if (selectedPlayerRows.length === 0) return "V√¶lg mindst √©n spiller.";
+    if (!courseId) return "V\u00e6lg en bane.";
+    if (!playedOn) return "V\u00e6lg en dato.";
+    if (selectedPlayerRows.length === 0) return "V\u00e6lg mindst \u00e9n spiller.";
 
     if (isNewCourse) {
-      if (!newCourseName.trim()) return "Skriv navnet p√• den nye bane.";
-      if (!newCourseLocation.trim()) return "Skriv lokationen p√• den nye bane.";
-      if (draftHoles.length === 0) return "Tilf√∏j mindst √©t hul til den nye bane.";
+      if (!newCourseName.trim()) return "Skriv navnet p\u00e5 den nye bane.";
+      if (!newCourseLocation.trim()) return "Skriv lokationen p\u00e5 den nye bane.";
+      if (draftHoles.length === 0) return "Tilf\u00f8j mindst \u00e9t hul til den nye bane.";
       if (draftHoles.some((hole) => !hole.hole_label.trim())) return "Alle huller skal have et navn/nummer.";
       const labels = draftHoles.map((hole) => hole.hole_label.trim().toLowerCase());
-      if (new Set(labels).size !== labels.length) return "Hulnavne skal v√¶re unikke p√• banen.";
+      if (new Set(labels).size !== labels.length) return "Hulnavne skal v\u00e6re unikke p\u00e5 banen.";
     } else if (holes.length === 0) {
       return "Den valgte bane har ingen registrerede huller.";
     }
@@ -374,7 +374,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
         const raw = scores[player.id]?.[hole.id] ?? "";
         const value = Number(raw);
         if (raw === "" || !Number.isInteger(value) || value < 1 || value > 99) {
-          return `Indtast en gyldig score p√• alle huller for ${player.name}.`;
+          return `Indtast en gyldig score p\u00e5 alle huller for ${player.name}.`;
         }
       }
     }
@@ -446,8 +446,8 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
 
       setSuccess(
         navigator.onLine
-          ? "Runden er gemt sikkert p√• telefonen og synkroniseres automatisk med Supabase."
-          : "Runden er gemt sikkert p√• telefonen og afventer synkronisering, n√•r forbindelsen kommer tilbage.",
+          ? "Runden er gemt sikkert p\u00e5 telefonen og synkroniseres automatisk med Supabase."
+          : "Runden er gemt sikkert p\u00e5 telefonen og afventer synkronisering, n\u00e5r forbindelsen kommer tilbage.",
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke gemme runden lokalt.");
@@ -460,7 +460,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
     return (
       <section className="panel new-round-loading">
         <div className="spinner" />
-        <p>Henter spillere og baner‚Ä¶</p>
+        <p>Henter spillere og baner&#x2026;</p>
       </section>
     );
   }
@@ -471,7 +471,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
         <div className="panel-heading">
           <div>
             <h2>Opret ny runde</h2>
-            <p>V√¶lg en eksisterende bane eller opret en ny bane, mens I spiller.</p>
+            <p>V&#xE6;lg en eksisterende bane eller opret en ny bane, mens I spiller.</p>
           </div>
         </div>
 
@@ -481,10 +481,10 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
             <select value={courseId} onChange={(event) => handleCourseChange(event.target.value)}>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>
-                  {course.name}{course.location ? ` ¬∑ ${course.location}` : ""}
+                  {course.name}{course.location ? ` \u00b7 ${course.location}` : ""}
                 </option>
               ))}
-              <option value={NEW_COURSE}>Ôºã Ny bane</option>
+              <option value={NEW_COURSE}>&#xFF0B; Ny bane</option>
             </select>
           </label>
 
@@ -502,10 +502,10 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
             <span>Baneinfo</span>
             <strong>
               {loadingHoles
-                ? "Henter‚Ä¶"
+                ? "Henter\u2026"
                 : isNewCourse
-                  ? `${draftHoles.length} huller tilf√∏jet ¬∑ Par ${coursePar}`
-                  : `${holes.length} huller ¬∑ Par ${coursePar}`}
+                  ? `${draftHoles.length} huller tilf\u00f8jet \u00b7 Par ${coursePar}`
+                  : `${holes.length} huller \u00b7 Par ${coursePar}`}
             </strong>
           </div>
         </div>
@@ -516,7 +516,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
               <div>
                 <span className="builder-eyebrow">Ny bane</span>
                 <h3>Opret banen under runden</h3>
-                <p>Tilf√∏j et hul, n√•r I n√•r til det, og angiv hulnavn/nummer og par.</p>
+                <p>Tilf&#xF8;j et hul, n&#xE5;r I n&#xE5;r til det, og angiv hulnavn/nummer og par.</p>
               </div>
             </div>
 
@@ -526,7 +526,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
                 <input
                   value={newCourseName}
                   onChange={(event) => setNewCourseName(event.target.value)}
-                  placeholder="Fx √òstre Anl√¶g Disc Golf"
+                  placeholder={"Fx \u00d8stre Anl\u00e6g Disc Golf"}
                 />
               </label>
 
@@ -542,7 +542,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
 
             <div className="draft-hole-list">
               {draftHoles.length === 0 ? (
-                <div className="draft-hole-empty">Ingen huller endnu. Tilf√∏j f√∏rste hul, n√•r runden starter.</div>
+                <div className="draft-hole-empty">Ingen huller endnu. Tilf&#xF8;j f&#xF8;rste hul, n&#xE5;r runden starter.</div>
               ) : (
                 draftHoles.map((hole, index) => (
                   <div className="draft-hole-row" key={hole.id}>
@@ -552,7 +552,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
                       <input
                         value={hole.hole_label}
                         onChange={(event) => updateDraftHole(hole.id, "hole_label", event.target.value)}
-                        aria-label={`Navn p√• hul ${index + 1}`}
+                        aria-label={`Navn p\u00e5 hul ${index + 1}`}
                       />
                     </label>
                     <label>
@@ -560,7 +560,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
                       <select
                         value={hole.par}
                         onChange={(event) => updateDraftHole(hole.id, "par", event.target.value)}
-                        aria-label={`Par p√• hul ${hole.hole_label}`}
+                        aria-label={`Par p\u00e5 hul ${hole.hole_label}`}
                       >
                         {Array.from({ length: 8 }, (_, parIndex) => parIndex + 2).map((par) => (
                           <option key={par} value={par}>{par}</option>
@@ -581,7 +581,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
             </div>
 
             <button type="button" className="add-hole-button" onClick={addDraftHole}>
-              <span>Ôºã</span> Tilf√∏j n√¶ste hul
+              <span>&#xFF0B;</span> Tilf&#xF8;j n&#xE6;ste hul
             </button>
           </div>
         ) : null}
@@ -592,7 +592,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
               <span>Spillere</span>
               <strong>{selectedPlayerRows.length} valgt</strong>
             </div>
-            <small>Klik p√• en spiller for at til- eller frav√¶lge.</small>
+            <small>Klik p&#xE5; en spiller for at til- eller frav&#xE6;lge.</small>
           </div>
 
           <div className="player-picker">
@@ -607,7 +607,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
                   onClick={() => togglePlayer(player.id)}
                   aria-pressed={selected}
                 >
-                  <span className="player-chip-check">{selected ? "‚úì" : "+"}</span>
+                  <span className="player-chip-check">{selected ? "\u2713" : "+"}</span>
                   <span>{player.name}</span>
                   {isMe ? <small>dig</small> : null}
                 </button>
@@ -626,20 +626,20 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
             <h2>Scorekort</h2>
             <p>
               {isNewCourse
-                ? "N√•r du tilf√∏jer et nyt hul ovenfor, dukker det straks op her."
-                : "Indtast antal kast p√• hvert hul. Total og score mod par beregnes automatisk."}
+                ? "N\u00e5r du tilf\u00f8jer et nyt hul ovenfor, dukker det straks op her."
+                : "Indtast antal kast p\u00e5 hvert hul. Total og score mod par beregnes automatisk."}
             </p>
           </div>
-          <div className="round-par-badge">Par {coursePar || "‚Äì"}</div>
+          <div className="round-par-badge">Par {coursePar || "\u2013"}</div>
         </div>
 
         {selectedPlayerRows.length === 0 ? (
-          <div className="empty-state">V√¶lg mindst √©n spiller ovenfor.</div>
+          <div className="empty-state">V&#xE6;lg mindst &#xE9;n spiller ovenfor.</div>
         ) : loadingHoles ? (
-          <div className="new-round-loading inline-loading"><div className="spinner" /><p>Henter huller‚Ä¶</p></div>
+          <div className="new-round-loading inline-loading"><div className="spinner" /><p>Henter huller&#x2026;</p></div>
         ) : roundHoles.length === 0 ? (
           <div className="empty-state">
-            {isNewCourse ? "Tilf√∏j f√∏rste hul til den nye bane ovenfor." : "Den valgte bane har ingen registrerede huller."}
+            {isNewCourse ? "Tilf\u00f8j f\u00f8rste hul til den nye bane ovenfor." : "Den valgte bane har ingen registrerede huller."}
           </div>
         ) : (
           <div className="table-scroll score-entry-scroll">
@@ -693,9 +693,9 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
                     const complete = totals[player.id]?.complete ?? false;
                     return (
                       <td key={player.id}>
-                        <strong>{complete ? total : "‚Äì"}</strong>
+                        <strong>{complete ? total : "\u2013"}</strong>
                         <span className="to-par-inline">
-                          {complete ? toParLabel(total - coursePar) : "ufuldst√¶ndig"}
+                          {complete ? toParLabel(total - coursePar) : "ufuldst\u00e6ndig"}
                         </span>
                       </td>
                     );
@@ -709,7 +709,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
         <div className="round-save-bar">
           <div>
             <strong>{selectedPlayerRows.length} spiller{selectedPlayerRows.length === 1 ? "" : "e"}</strong>
-            <span>{roundHoles.length} huller ¬∑ {playedOn || "ingen dato"}</span>
+            <span>{roundHoles.length} huller &#xB7; {playedOn || "ingen dato"}</span>
           </div>
           <button
             type="button"
@@ -717,7 +717,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
             onClick={saveRound}
             disabled={saving || loadingHoles || selectedPlayerRows.length === 0 || roundHoles.length === 0}
           >
-            {saving ? "Gemmer sikkert‚Ä¶" : isNewCourse ? "Gem ny bane + runde" : "Gem runde"}
+            {saving ? "Gemmer sikkert\u2026" : isNewCourse ? "Gem ny bane + runde" : "Gem runde"}
           </button>
         </div>
       </section>
