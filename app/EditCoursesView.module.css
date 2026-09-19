@@ -1,0 +1,41 @@
+.stack { display: grid; gap: 14px; }
+.panel { overflow: hidden; }
+.body { padding: 18px 22px 22px; }
+.twoColumns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field, .compactField { display: grid; gap: 6px; color: var(--muted); font-size: .78rem; font-weight: 800; }
+.field input, .field select, .compactField input, .compactField select { width: 100%; min-width: 0; border: 1px solid var(--line-strong); border-radius: 11px; background: #fff; color: var(--text); padding: 10px 11px; font: inherit; }
+.versionBadge, .parBadge { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; border-radius: 999px; background: var(--mint); color: var(--forest-2); padding: 7px 10px; font-size: .76rem; font-weight: 800; }
+.parBadge { margin-top: 0; flex: 0 0 auto; }
+.formulaStatus { margin-top: 10px; border-radius: 10px; padding: 9px 11px; font-size: .78rem; font-weight: 750; }
+.valid { background: #edf8ef; color: #24502d; }
+.invalid { background: #faece9; color: var(--danger); }
+.previewGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.previewCard { display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); padding: 10px; text-align: center; }
+.previewCard span, .previewCard small { color: var(--muted); font-size: .68rem; }
+.previewCard strong { color: var(--forest); font-size: 1.15rem; }
+.help { display: block; margin-top: 9px; color: var(--muted); font-size: .7rem; }
+.holeList { display: grid; gap: 7px; }
+.holeRow { display: grid; grid-template-columns: 32px minmax(90px, 1fr) 82px 76px auto; gap: 8px; align-items: end; border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 8px; }
+.order { width: 28px; height: 28px; align-self: center; display: grid; place-items: center; border-radius: 50%; background: var(--mint); color: var(--forest-2); font-size: .72rem; font-weight: 900; }
+.moveButtons { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.moveButtons button { border: 1px solid var(--line-strong); border-radius: 9px; background: #fff; padding: 9px 6px; cursor: pointer; font-weight: 900; }
+.moveButtons button:disabled { opacity: .35; cursor: default; }
+.removeButton { border: 0; border-radius: 9px; background: #faece9; color: var(--danger); padding: 10px; cursor: pointer; font-weight: 800; }
+.addButton { margin-top: 11px; border: 1px solid #98bca2; border-radius: 11px; background: #fff; color: var(--forest-2); padding: 9px 12px; cursor: pointer; font-weight: 850; }
+.layoutWarning { margin-top: 12px; border: 1px solid #ead27b; border-radius: 11px; background: #fff4cf; color: #684f00; padding: 10px 12px; font-size: .76rem; line-height: 1.4; }
+.loading { padding: 12px; color: var(--muted); }
+.saveBar { display: flex; justify-content: flex-end; }
+@media (max-width: 650px) {
+  .stack { gap: 10px; }
+  .body { padding: 10px; }
+  .twoColumns { grid-template-columns: 1fr; gap: 8px; }
+  .field input, .field select, .compactField input, .compactField select { font-size: 16px; padding: 8px 9px; }
+  .previewGrid { gap: 5px; }
+  .previewCard { padding: 8px 5px; }
+  .holeRow { grid-template-columns: 26px minmax(0, 1fr) 68px 64px; gap: 5px; padding: 6px; }
+  .order { width: 24px; height: 24px; font-size: .64rem; }
+  .moveButtons button { padding: 8px 4px; }
+  .removeButton { grid-column: 2 / -1; padding: 7px 9px; }
+  .saveBar { position: sticky; bottom: 8px; z-index: 5; }
+  .saveBar button { width: 100%; }
+}
