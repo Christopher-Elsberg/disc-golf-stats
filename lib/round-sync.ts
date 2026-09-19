@@ -9,25 +9,28 @@ import {
 async function syncOneRound(round: PendingRound): Promise<void> {
   let finalCourseId = round.course.id;
 
+  const layoutVersion = round.course.layout_version ?? 1;
+
   if (round.course.type === "new") {
     const newCourse = round.course;
-
     const { error: courseError } = await supabase.from("courses").upsert(
       {
         id: newCourse.id,
         name: newCourse.name,
         slug: newCourse.slug,
         location: newCourse.location,
+        rating_formula: newCourse.rating_formula ?? null,
+        current_layout_version: layoutVersion,
       },
       { onConflict: "id" },
     );
-
     if (courseError) throw courseError;
 
     const { error: holesError } = await supabase.from("course_holes").upsert(
       newCourse.holes.map((hole) => ({
         id: hole.id,
         course_id: newCourse.id,
+        layout_version: layoutVersion,
         score_index: hole.score_index,
         hole_label: hole.hole_label,
         display_order: hole.display_order,
@@ -35,7 +38,6 @@ async function syncOneRound(round: PendingRound): Promise<void> {
       })),
       { onConflict: "id" },
     );
-
     if (holesError) throw holesError;
     finalCourseId = newCourse.id;
   }
@@ -44,22 +46,18 @@ async function syncOneRound(round: PendingRound): Promise<void> {
     {
       id: round.id,
       course_id: finalCourseId,
+      course_layout_version: layoutVersion,
       played_on: round.played_on,
       created_by: round.auth_user_id,
     },
     { onConflict: "id" },
   );
-
   if (roundError) throw roundError;
 
   const { error: playersError } = await supabase.from("round_players").upsert(
-    round.player_ids.map((playerId) => ({
-      round_id: round.id,
-      player_id: playerId,
-    })),
+    round.player_ids.map((playerId) => ({ round_id: round.id, player_id: playerId })),
     { onConflict: "round_id,player_id" },
   );
-
   if (playersError) throw playersError;
 
   const { error: scoresError } = await supabase.from("hole_scores").upsert(
@@ -71,17 +69,12 @@ async function syncOneRound(round: PendingRound): Promise<void> {
     })),
     { onConflict: "round_id,player_id,course_hole_id" },
   );
-
   if (scoresError) throw scoresError;
 
   await deletePendingRound(round.id);
 }
 
-export type SyncResult = {
-  synced: number;
-  failed: number;
-  lastError: string | null;
-};
+export type SyncResult = { synced: number; failed: number; lastError: string | null };
 
 export async function syncPendingRounds(authUserId: string): Promise<SyncResult> {
   const pending = await getPendingRounds(authUserId);
@@ -97,12 +90,10 @@ export async function syncPendingRounds(authUserId: string): Promise<SyncResult>
       failed += 1;
       lastError = error instanceof Error ? error.message : String(error);
       await markPendingRoundError(round, lastError);
-
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
-        break;
-      }
+      if (typeof navigator !== "undefined" && !navigator.onLine) break;
     }
   }
 
   return { synced, failed, lastError };
 }
+
