@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { savePendingRound, type PendingRound } from "@/lib/offline-rounds";
+import { evaluateRatingFormula, validateRatingFormula } from "@/lib/rating-formula";
 
 type PlayerOption = {
   id: string;
@@ -14,6 +15,8 @@ type CourseOption = {
   id: string;
   name: string;
   location: string | null;
+  rating_formula: string | null;
+  current_layout_version: number;
 };
 
 type CourseHole = {
@@ -34,8 +37,8 @@ type Props = {
 };
 
 const NEW_COURSE = "__new_course__";
-const SETUP_CACHE_KEY = "disc-golf-setup-cache-v1";
-const HOLES_CACHE_PREFIX = "disc-golf-course-holes-v1:";
+const SETUP_CACHE_KEY = "disc-golf-setup-cache-v2";
+const HOLES_CACHE_PREFIX = "disc-golf-course-holes-v2:";
 
 function localDateString() {
   const now = new Date();
@@ -79,9 +82,9 @@ function writeSetupCache(players: PlayerOption[], courses: CourseOption[]) {
   }
 }
 
-function readHolesCache(courseId: string): CourseHole[] | null {
+function readHolesCache(courseId: string, layoutVersion: number): CourseHole[] | null {
   try {
-    const raw = window.localStorage.getItem(`${HOLES_CACHE_PREFIX}${courseId}`);
+    const raw = window.localStorage.getItem(`${HOLES_CACHE_PREFIX}${courseId}:${layoutVersion}`);
     if (!raw) return null;
     return JSON.parse(raw) as CourseHole[];
   } catch {
@@ -89,9 +92,9 @@ function readHolesCache(courseId: string): CourseHole[] | null {
   }
 }
 
-function writeHolesCache(courseId: string, holes: CourseHole[]) {
+function writeHolesCache(courseId: string, layoutVersion: number, holes: CourseHole[]) {
   try {
-    window.localStorage.setItem(`${HOLES_CACHE_PREFIX}${courseId}`, JSON.stringify(holes));
+    window.localStorage.setItem(`${HOLES_CACHE_PREFIX}${courseId}:${layoutVersion}`, JSON.stringify(holes));
   } catch {
     // Ignore cache failures.
   }
@@ -107,6 +110,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
   const [newCourseLocalId, setNewCourseLocalId] = useState<string | null>(null);
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseLocation, setNewCourseLocation] = useState("");
+  const [newCourseRatingFormula, setNewCourseRatingFormula] = useState("");
   const [playedOn, setPlayedOn] = useState(localDateString());
   const [scores, setScores] = useState<Record<string, Record<string, string>>>({});
   const [loadingSetup, setLoadingSetup] = useState(true);
@@ -116,6 +120,10 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
   const [success, setSuccess] = useState("");
 
   const isNewCourse = courseId === NEW_COURSE;
+  const selectedCourse = useMemo(
+    () => courses.find((course) => course.id === courseId) ?? null,
+    [courses, courseId],
+  );
   const roundHoles: CourseHole[] = isNewCourse ? draftHoles : holes;
 
   useEffect(() => {
@@ -133,7 +141,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
           .order("name", { ascending: true }),
         supabase
           .from("courses")
-          .select("id,name,location")
+          .select("id,name,location,rating_formula,current_layout_version")
           .order("name", { ascending: true }),
       ]);
 
@@ -197,16 +205,18 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
       setError("");
       setSuccess("");
 
+      const layoutVersion = selectedCourse?.current_layout_version ?? 1;
       const { data, error: holesError } = await supabase
         .from("course_holes")
         .select("id,score_index,hole_label,display_order,par")
         .eq("course_id", courseId)
+        .eq("layout_version", layoutVersion)
         .order("display_order", { ascending: true });
 
       if (cancelled) return;
 
       if (holesError) {
-        const cached = readHolesCache(courseId);
+        const cached = readHolesCache(courseId, selectedCourse?.current_layout_version ?? 1);
         if (cached) {
           setHoles(cached);
           setScores({});
@@ -217,7 +227,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
       } else {
         const rows = (data ?? []) as CourseHole[];
         setHoles(rows);
-        writeHolesCache(courseId, rows);
+        writeHolesCache(courseId, selectedCourse?.current_layout_version ?? 1, rows);
         setScores({});
       }
 
@@ -229,7 +239,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [courseId, isNewCourse]);
+  }, [courseId, isNewCourse, selectedCourse?.current_layout_version]);
 
   const selectedPlayerRows = useMemo(
     () => players.filter((player) => selectedPlayers.includes(player.id)),
@@ -365,6 +375,8 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
       if (draftHoles.some((hole) => !hole.hole_label.trim())) return "Alle huller skal have et navn/nummer.";
       const labels = draftHoles.map((hole) => hole.hole_label.trim().toLowerCase());
       if (new Set(labels).size !== labels.length) return "Hulnavne skal v\u00e6re unikke p\u00e5 banen.";
+      const formulaError = validateRatingFormula(newCourseRatingFormula);
+      if (formulaError) return formulaError;
     } else if (holes.length === 0) {
       return "Den valgte bane har ingen registrerede huller.";
     }
@@ -409,6 +421,8 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
               name: newCourseName.trim(),
               slug: `${baseSlug}-${localCourseId.slice(0, 8)}`,
               location: newCourseLocation.trim() || null,
+              rating_formula: newCourseRatingFormula.trim() || null,
+              layout_version: 1,
               holes: draftHoles.map((hole, index) => ({
                 id: hole.id,
                 score_index: index + 1,
@@ -421,6 +435,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
         : {
             type: "existing" as const,
             id: courseId,
+            layout_version: selectedCourse?.current_layout_version ?? 1,
           };
 
       const pendingRound: PendingRound = {
@@ -538,7 +553,33 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
                   placeholder="Fx Aalborg"
                 />
               </label>
+              <label className="round-field" style={{ gridColumn: "1 / -1" }}>
+                <span>Ratingformel (valgfri)</span>
+                <input
+                  value={newCourseRatingFormula}
+                  onChange={(event) => setNewCourseRatingFormula(event.target.value)}
+                  placeholder="Fx 1000 + 8.4 * (59 - score)"
+                />
+                <small>Tomt felt betyder, at banen ikke f&#xE5;r beregnet rating.</small>
+              </label>
             </div>
+
+            {newCourseRatingFormula.trim() ? (
+              <div className="course-summary" style={{ marginTop: 12 }}>
+                <span>Ratingeksempel</span>
+                <strong>
+                  {validateRatingFormula(newCourseRatingFormula)
+                    ? validateRatingFormula(newCourseRatingFormula)
+                    : `Par-score ${coursePar}: ${Math.round(
+                        evaluateRatingFormula(newCourseRatingFormula, {
+                          score: coursePar,
+                          course_par: coursePar,
+                          score_to_par: 0,
+                        }),
+                      )}`}
+                </strong>
+              </div>
+            ) : null}
 
             <div className="draft-hole-list">
               {draftHoles.length === 0 ? (
