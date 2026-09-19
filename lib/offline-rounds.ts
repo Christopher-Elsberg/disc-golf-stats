@@ -2,6 +2,7 @@ export type PendingRoundCourse =
   | {
       type: "existing";
       id: string;
+      layout_version: number;
     }
   | {
       type: "new";
@@ -9,6 +10,8 @@ export type PendingRoundCourse =
       name: string;
       slug: string;
       location: string | null;
+      rating_formula: string | null;
+      layout_version: number;
       holes: Array<{
         id: string;
         score_index: number;
@@ -134,3 +137,4 @@ export async function markPendingRoundError(round: PendingRound, message: string
     last_error: message,
   });
 }
+
