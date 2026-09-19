@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { getPendingRounds } from "@/lib/offline-rounds";
 import { syncPendingRounds } from "@/lib/round-sync";
 import NewRoundView from "@/app/NewRoundView";
+import EditCoursesView from "@/app/EditCoursesView";
 import type {
   BestRound,
   HeadToHead,
@@ -22,6 +23,7 @@ import type {
 
 type View =
   | "newround"
+  | "courses"
   | "mine"
   | "overview"
   | "scorecards"
@@ -37,6 +39,7 @@ type AuthMode = "login" | "signup";
 
 const MENU: Array<{ id: View; label: string; icon: string }> = [
   { id: "newround", label: "Ny runde", icon: "+" },
+  { id: "courses", label: "Rediger baner", icon: "\u270e" },
   { id: "mine", label: "Mine stats", icon: "\ud83d\udc64" },
   { id: "overview", label: "Oversigt", icon: "\u25c8" },
   { id: "scorecards", label: "Sidste 5", icon: "\u25a6" },
@@ -813,15 +816,17 @@ export default function HomePage() {
               <span className="eyebrow">
                 {view === "newround"
                   ? "Scoreindtastning"
-                  : view === "mine"
-                    ? "Personlig statistik"
-                    : activeCourseName}
+                  : view === "courses"
+                    ? "Banestyring"
+                    : view === "mine"
+                      ? "Personlig statistik"
+                      : activeCourseName}
               </span>
               <h1>{activeMenu}</h1>
             </div>
           </div>
 
-          {view !== "newround" ? (
+          {view !== "newround" && view !== "courses" ? (
             <div className="filters">
               <label>
                 <span>S&#xE6;son</span>
@@ -880,16 +885,22 @@ export default function HomePage() {
           />
         ) : null}
 
-        {view !== "newround" && loading && !stats ? <LoadingScreen /> : null}
+        {view === "courses" ? (
+          <EditCoursesView
+            onSaved={() => setStatsRefreshKey((value) => value + 1)}
+          />
+        ) : null}
 
-        {view !== "newround" && error ? (
+        {view !== "newround" && view !== "courses" && loading && !stats ? <LoadingScreen /> : null}
+
+        {view !== "newround" && view !== "courses" && error ? (
           <div className="error-banner">
             <strong>Kunne ikke hente statistik</strong>
             <span>{error}</span>
           </div>
         ) : null}
 
-        {view !== "newround" && stats ? (
+        {view !== "newround" && view !== "courses" && stats ? (
           <div className={`content-stack ${loading ? "is-refreshing" : ""}`}>
             {stats.stats.incomplete_entries.length > 0 ? (
               <div className="warning-banner">
@@ -1362,7 +1373,7 @@ export default function HomePage() {
                   <div className="formula-grid">
                     <div>
                       <span>Rating</span>
-                      <strong>1000 + 8,4 &#xD7; (-7 - score vs. par)</strong>
+                      <strong>Banespecifik formel; baner uden formel f&#xE5;r ingen rating</strong>
                     </div>
                     <div>
                       <span>Handicap</span>
