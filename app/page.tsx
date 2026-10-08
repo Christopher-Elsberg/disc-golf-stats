@@ -46,12 +46,12 @@ const MENU: Array<{ id: View; label: string; icon: string }> = [
   { id: "overview", label: "Oversigt", icon: "\u25c8" },
   { id: "scorecards", label: "Sidste 5", icon: "\u25a6" },
   { id: "headtohead", label: "Head-to-head", icon: "\u2694" },
-  { id: "shots", label: "Slagtyper", icon: "\u25ce" },
+  { id: "shots", label: "Kasttyper", icon: "\u25ce" },
   { id: "frontback", label: "Front / Back", icon: "\u2194" },
   { id: "best", label: "Bedste runder", icon: "\u2605" },
   { id: "holes", label: "Hulstatistik", icon: "\u26f3" },
   { id: "bestworst", label: "Bedst / V\u00e6rst", icon: "\u21c5" },
-  { id: "rating", label: "Rating", icon: "\u2197" },
+  { id: "rating", label: "Ratings", icon: "\u2197" },
 ];
 
 function formatNumber(value: number | null | undefined, digits = 1) {
