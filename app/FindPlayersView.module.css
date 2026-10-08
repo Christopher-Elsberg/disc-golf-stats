@@ -35,3 +35,11 @@
 .error { color:#b3261e; }
 .hint { text-align:center; opacity:.7; padding:25px 10px; font-size:.88rem; }
 @media(max-width:600px) { .root,.profile { gap:10px; } .section { padding:11px; border-radius:12px; } .results { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .kpi { padding:10px; } .table th,.table td { padding:7px 8px; font-size:.76rem; } .profileHeader { padding:10px; } }
+
+/* Profile shortcuts are horizontally scrollable on small screens; all sections remain visible. */
+.profileNav { display:flex; flex-wrap:wrap; gap:7px; min-width:0; }
+.profileNav a { color:inherit; font-size:.79rem; font-weight:650; text-decoration:none; padding:8px 11px; border:1px solid rgba(90,135,124,.25); border-radius:999px; background:rgba(19,163,123,.07); white-space:nowrap; }
+.profileNav a:hover, .profileNav a:focus-visible { border-color:#13a37b; background:rgba(19,163,123,.18); }
+.holeSections { display:grid; gap:12px; min-width:0; }
+.section[id], .kpis[id], .holeSections[id] { scroll-margin-top:20px; }
+@media(max-width:650px) { .profileNav { display:flex; flex-wrap:nowrap; max-width:100%; overflow-x:auto; padding-bottom:5px; -webkit-overflow-scrolling:touch; } .profileNav a { padding:7px 10px; } }

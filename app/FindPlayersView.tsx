@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Scorecard, StatsResponse } from "@/types/stats";
 import styles from "./FindPlayersView.module.css";
@@ -30,9 +30,9 @@ function date(value: string): string {
     : value;
 }
 
-function Box({ title, children }: { title: string; children: React.ReactNode }) {
+function Box({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section className={styles.section}>
+    <section id={id} className={styles.section}>
       <h3>{title}</h3>
       {children}
     </section>
@@ -107,6 +107,7 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
   const [query, setQuery] = useState("");
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const profileRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -126,6 +127,10 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
     void loadPlayers();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (selectedId) profileRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedId]);
 
   const matches = useMemo(() => {
     const search = query.trim().toLocaleLowerCase("da-DK");
@@ -190,15 +195,31 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
       </section>
 
       {selected ? (
-        <div className={styles.profile}>
+        <div ref={profileRef} className={styles.profile}>
           <header className={styles.profileHeader}>
             <div className={styles.avatarLarge}>{selected.name.slice(0, 1).toLocaleUpperCase("da-DK")}</div>
             <div><p className={styles.muted}>Spillerprofil</p><h2>{selected.name}</h2></div>
             <button className={styles.close} type="button" onClick={() => setSelectedId(null)}>Luk profil</button>
           </header>
 
+          <nav className={styles.profileNav} aria-label="Statistik p\u00e5 spillerprofilen">
+            {[
+              ["#profile-overview", "Overblik"],
+              ["#profile-recent", "Seneste runder"],
+              ["#profile-allrounds", "Alle runder"],
+              ["#profile-scorecards", "Scorecards"],
+              ["#profile-headtohead", "Head-to-head"],
+              ["#profile-shots", "Slagtyper"],
+              ["#profile-frontback", "Front / Back"],
+              ["#profile-best", "Bedste runde"],
+              ["#profile-hole-averages", "Hulstatistik"],
+              ["#profile-bestworst", "Bedst / V\u00e6rst"],
+              ["#profile-rating", "Rating"],
+            ].map(([href, label]) => <a href={href} key={href}>{label}</a>)}
+          </nav>
+
           {!p ? <section className={styles.section}><p>Ingen komplette runder i det valgte filter.</p></section> : <>
-            <div className={styles.kpis}>
+            <div id="profile-overview" className={styles.kpis}>
               {[
                 ["Rating", num(p.rating, 0)], ["Handicap", num(p.handicap)],
                 ["Runder", String(p.rounds_played)], ["Sejre", String(p.round_wins)],
@@ -207,7 +228,7 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
               ].map(([label, value]) => <div key={label} className={styles.kpi}><span>{label}</span><strong>{value}</strong></div>)}
             </div>
 
-            <Box title="Seneste runder">
+            <Box id="profile-recent" title="Seneste runder">
               {recent.length ? <div className={styles.tableScroll}><table className={styles.table}>
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Vs. par</th><th>Rating</th></tr></thead>
                 <tbody>{recent.map((r) => <tr key={r.round_id}>
@@ -217,13 +238,23 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
               </table></div> : <p className={styles.muted}>Ingen runder.</p>}
             </Box>
 
-            <Box title="Ratingudvikling"><RatingPlot values={history} /></Box>
+            <Box id="profile-allrounds" title="Alle runder">
+              {history.length ? <div className={styles.tableScroll}><table className={styles.table}>
+                <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Par</th><th>Vs. par</th><th>Rating</th></tr></thead>
+                <tbody>{[...history].sort((a, b) => b.round_number - a.round_number).map((r) => <tr key={r.round_id}>
+                  <th>#{r.round_number}</th><td>{date(r.date)}</td><td>{r.course_name}</td>
+                  <td>{r.total_strokes}</td><td>{r.course_par}</td><td>{vsPar(r.score_to_par)}</td><td>{num(r.rating, 0)}</td>
+                </tr>)}</tbody>
+              </table></div> : <p className={styles.muted}>Ingen runder i dette filter.</p>}
+            </Box>
 
-            <Box title="Bedste runde">
+            <Box id="profile-rating" title="Ratingudvikling"><RatingPlot values={history} /></Box>
+
+            <Box id="profile-best" title="Bedste runde">
               <p>{best ? `${best.course_name} | #${best.round_number} | ${best.total_strokes} slag (${vsPar(best.score_to_par)}) | rating ${num(best.rating, 0)}` : "Ingen runder"}</p>
             </Box>
 
-            <Box title="Slagtyper">
+            <Box id="profile-shots" title="Slagtyper">
               {shot ? <div className={styles.tableScroll}><table className={styles.table}>
                 <thead><tr><th>Huller</th><th>Streger</th><th>Birdies</th><th>Bogeys</th><th>Double+</th></tr></thead>
                 <tbody><tr><td>{shot.holes_played}</td>
@@ -233,7 +264,7 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
               </table></div> : <p className={styles.muted}>Ingen slagdata.</p>}
             </Box>
 
-            <Box title="Head-to-head">
+            <Box id="profile-headtohead" title="Head-to-head">
               {headToHead.length ? <div className={styles.tableScroll}><table className={styles.table}>
                 <thead><tr><th>Modstander</th><th>Kampe</th><th>Sejre</th><th>Nederlag</th><th>Uafgjort</th><th>Winrate</th></tr></thead>
                 <tbody>{headToHead.map((r) => {
@@ -248,7 +279,7 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
               </table></div> : <p className={styles.muted}>Ingen direkte opg&#xF8;r i det valgte filter.</p>}
             </Box>
 
-            <Box title="Front / Back">
+            <Box id="profile-frontback" title="Front / Back">
               {frontBack.length ? <div className={styles.tableScroll}><table className={styles.table}>
                 <thead><tr><th>Bane</th><th>Runder</th><th>Front</th><th>Back</th></tr></thead>
                 <tbody>{frontBack.map((r) => <tr key={r.course_name}>
@@ -258,7 +289,7 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
               </table></div> : <p className={styles.muted}>Ingen Front / Back-data.</p>}
             </Box>
 
-            <Box title="Bedste og v&#xE6;rste huller">
+            <Box id="profile-bestworst" title="Bedste og v&#xE6;rste huller">
               {bestWorst.length ? <div className={styles.tableScroll}><table className={styles.table}>
                 <thead><tr><th>Bane</th><th>Bedste hul</th><th>Gns. vs. par</th><th>V&#xE6;rste hul</th><th>Gns. vs. par</th></tr></thead>
                 <tbody>{bestWorst.map((r) => <tr key={r.course_id}>
@@ -269,7 +300,9 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
               </table></div> : <p className={styles.muted}>Ingen huldata.</p>}
             </Box>
 
-            {holeStats.map((course) => <Box key={course.course_id} title={`Hulstatistik | ${course.course_name}`}>
+            <div id="profile-hole-averages" className={styles.holeSections}>
+              {holeStats.length === 0 ? <Box title="Hulstatistik"><p className={styles.muted}>Ingen hulstatistik.</p></Box> : null}
+              {holeStats.map((course) => <Box key={course.course_id} title={`Hulstatistik | ${course.course_name}`}>
               <div className={styles.tableScroll}><table className={styles.table}>
                 <thead><tr><th>Hul</th><th>Par</th><th>Gns. slag</th><th>Gns. vs. par</th><th>Bedste score</th></tr></thead>
                 <tbody>{course.holes.map((hole) => <tr key={hole.hole_id}>
@@ -280,8 +313,9 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
                 </tr>)}</tbody>
               </table></div>
             </Box>)}
+            </div>
 
-            <Box title="De fem seneste scorecards">
+            <Box id="profile-scorecards" title="De fem seneste scorecards">
               {cards.length ? cards.map((card) => <ProfileScorecard key={card.round_id} scorecard={card} />) :
                 <p className={styles.muted}>Ingen scorecards i filteret.</p>}
             </Box>

@@ -1,0 +1,9 @@
+/* Only styles the nested statistics menu; no global responsive overrides. */
+.statsToggle { display: flex; align-items: center; width: 100%; }
+.statsToggleLabel { flex: 1; text-align: left; }
+.chevron { margin-left: auto; font-size: 0.9em; opacity: 0.75; }
+.parentActive { border-color: rgba(32, 164, 118, 0.3); }
+.statsSubmenu { margin: 0 5px 5px 17px; padding-left: 9px; border-left: 2px solid rgba(125, 150, 153, .24); display: grid; gap: 2px; min-width: 0; }
+.statsSubmenu .submenuItem { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: .85rem; line-height: 1.25; min-height: 35px; text-align: left; }
+.statsSubmenu .submenuItem > span:first-child { flex: 0 0 18px; font-size: .88rem; }
+@media (max-width: 650px) { .statsSubmenu { margin-left: 14px; } .statsSubmenu .submenuItem { padding: 8px 9px; min-height: 36px; } }
