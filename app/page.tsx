@@ -951,18 +951,18 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {view === "newround" ? (
-          <NewRoundView
-            currentUserId={session.user.id}
-            onQueued={() => setQueueRefreshKey((value) => value + 1)}
-          />
-        ) : null}
-
-        {view === "courses" ? (
-          <EditCoursesView
-            onSaved={() => setStatsRefreshKey((value) => value + 1)}
-          />
-        ) : null}
+<div
+  style={{
+    display: view === "newround" ? "block" : "none",
+  }}
+>
+  <NewRoundView
+    currentUserId={session.user.id}
+    onQueued={() =>
+      setQueueRefreshKey((value) => value + 1)
+    }
+  />
+</div>
 
         {view === "profiles" && stats ? (
           <FindPlayersView stats={stats} currentPlayerId={currentPlayer?.id ?? null} />
