@@ -73,7 +73,7 @@ export type RoundResult = {
   total_strokes: number;
   course_par: number;
   score_to_par: number;
-  rating: number;
+  rating: number | null;
   holes: Array<{
     hole_id: string;
     hole_label: string;
@@ -204,6 +204,7 @@ export type StatsResponse = {
     hole_stats: HoleStatsCourse[];
     best_worst_holes: BestWorstHole[];
     last_five_scorecards: Scorecard[];
+    player_last_five_scorecards?: Record<string, Scorecard[]>;
     rating_history: RatingHistory[];
   };
 };
