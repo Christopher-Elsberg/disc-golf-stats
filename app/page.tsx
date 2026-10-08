@@ -13,9 +13,9 @@ import { getPendingRounds } from "@/lib/offline-rounds";
 import { syncPendingRounds } from "@/lib/round-sync";
 import NewRoundView from "@/app/NewRoundView";
 import EditCoursesView from "@/app/EditCoursesView";
+import FindPlayersView from "@/app/FindPlayersView";
 import type {
   BestRound,
-  HeadToHead,
   RatingHistory,
   Scorecard,
   StatsResponse,
@@ -24,6 +24,7 @@ import type {
 type View =
   | "newround"
   | "courses"
+  | "profiles"
   | "mine"
   | "overview"
   | "scorecards"
@@ -41,6 +42,7 @@ const MENU: Array<{ id: View; label: string; icon: string }> = [
   { id: "newround", label: "Ny runde", icon: "+" },
   { id: "courses", label: "Rediger baner", icon: "\u270e" },
   { id: "mine", label: "Mine stats", icon: "\ud83d\udc64" },
+  { id: "profiles", label: "Find spillere", icon: "\u2315" },
   { id: "overview", label: "Oversigt", icon: "\u25c8" },
   { id: "scorecards", label: "Sidste 5", icon: "\u25a6" },
   { id: "headtohead", label: "Head-to-head", icon: "\u2694" },
@@ -398,33 +400,6 @@ function ScorecardTable({ scorecard }: { scorecard: Scorecard }) {
   );
 }
 
-function headToHeadCell(
-  rowPlayerId: string,
-  columnPlayerId: string,
-  rows: HeadToHead[],
-): { rate: number | null; wins: number; games: number } | null {
-  const match = rows.find(
-    (item) =>
-      (item.player_1_id === rowPlayerId && item.player_2_id === columnPlayerId) ||
-      (item.player_2_id === rowPlayerId && item.player_1_id === columnPlayerId),
-  );
-  if (!match) return null;
-
-  if (match.player_1_id === rowPlayerId) {
-    return {
-      rate: match.player_1_win_rate,
-      wins: match.player_1_wins,
-      games: match.games,
-    };
-  }
-
-  return {
-    rate: match.player_2_win_rate,
-    wins: match.player_2_wins,
-    games: match.games,
-  };
-}
-
 function bestRoundLabel(item: BestRound) {
   if (!item.best_round) return "\u2013";
   return `${item.best_round.total_strokes} (${formatToPar(item.best_round.score_to_par)})`;
@@ -433,7 +408,7 @@ function bestRoundLabel(item: BestRound) {
 export default function HomePage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<View>("mine");
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [season, setSeason] = useState<string>("all");
   const [courseId, setCourseId] = useState<string>("all");
@@ -705,7 +680,7 @@ export default function HomePage() {
         ...course,
         player: course.players.find((item) => item.player_id === currentPlayer.id) ?? null,
       }))
-      .filter((course) => course.player !== null);
+      .filter((course) => course.player !== null && course.player.rounds > 0);
 
     const bestWorst = stats.stats.best_worst_holes.filter(
       (item) => item.player_id === currentPlayer.id,
@@ -719,7 +694,7 @@ export default function HomePage() {
           .map((hole) => ({
             ...hole,
             player:
-              hole.players.find((item) => item.player_id === currentPlayer.id) ?? null,
+              hole.players.find((item) => item.player_id === currentPlayer.id && item.all_time_samples > 0) ?? null,
           }))
           .filter((hole) => hole.player !== null),
       }))
@@ -738,6 +713,54 @@ export default function HomePage() {
     };
   }, [stats, currentPlayer]);
 
+  // Only the logged-in player's data is passed to the regular statistics tabs.
+  // Full stats are used exclusively in FindPlayersView to display searched profiles.
+  const personalStats = useMemo(() => {
+    if (!stats || !currentPlayer) return null;
+    const id = currentPlayer.id;
+    const playerStat = stats.stats.player_stats.find((p) => p.player_id === id);
+    const ownScorecards = (stats.stats.player_last_five_scorecards?.[id] ??
+      stats.stats.last_five_scorecards.filter((round) =>
+        round.players.some((player) => player.player_id === id)
+      )).map((round) => ({
+        ...round,
+        players: round.players.filter((player) => player.player_id === id),
+      }));
+
+    return {
+      ...stats,
+      stats: {
+        ...stats.stats,
+        rounds: playerStat?.rounds_played ?? 0,
+        completed_rounds: playerStat?.rounds_played ?? 0,
+        player_round_results: playerStat?.rounds_played ?? 0,
+        incomplete_entries: stats.stats.incomplete_entries.filter((r) => r.player_id === id),
+        player_stats: stats.stats.player_stats.filter((p) => p.player_id === id),
+        shot_counts: stats.stats.shot_counts.filter((p) => p.player_id === id),
+        best_rounds: stats.stats.best_rounds.filter((p) => p.player_id === id),
+        rating_history: stats.stats.rating_history.filter((p) => p.player_id === id),
+        head_to_head: stats.stats.head_to_head.filter((row) =>
+          row.player_1_id === id || row.player_2_id === id
+        ),
+        front_back: stats.stats.front_back.map((course) => ({
+          ...course,
+          players: course.players.filter((p) => p.player_id === id && p.rounds > 0),
+        })).filter((course) => course.players.length > 0),
+        hole_stats: stats.stats.hole_stats.map((course) => ({
+          ...course,
+          holes: course.holes.map((hole) => ({
+            ...hole,
+            players: hole.players.filter((p) => p.player_id === id && p.all_time_samples > 0),
+          })),
+        })).filter((course) => course.holes.some((hole) => hole.players.length > 0)),
+        best_worst_holes: stats.stats.best_worst_holes.filter((p) =>
+          p.player_id === id && (p.best_hole !== null || p.worst_hole !== null)
+        ),
+        last_five_scorecards: ownScorecards,
+      },
+    };
+  }, [stats, currentPlayer]);
+
   if (!authReady) return <LoadingScreen />;
   if (!session) return <AuthScreen />;
 
@@ -745,7 +768,7 @@ export default function HomePage() {
     await supabase.auth.signOut({ scope: "local" });
   }
 
-  const playerStats = stats?.stats.player_stats ?? [];
+  const playerStats = personalStats?.stats.player_stats ?? [];
   const activeMenu = MENU.find((item) => item.id === view)?.label ?? "Oversigt";
 
   return (
@@ -818,6 +841,8 @@ export default function HomePage() {
                   ? "Scoreindtastning"
                   : view === "courses"
                     ? "Banestyring"
+                    : view === "profiles"
+                      ? "Spillerprofiler"
                     : view === "mine"
                       ? "Personlig statistik"
                       : activeCourseName}
@@ -891,6 +916,10 @@ export default function HomePage() {
           />
         ) : null}
 
+        {view === "profiles" && stats ? (
+          <FindPlayersView stats={stats} currentPlayerId={currentPlayer?.id ?? null} />
+        ) : null}
+
         {view !== "newround" && view !== "courses" && loading && !stats ? <LoadingScreen /> : null}
 
         {view !== "newround" && view !== "courses" && error ? (
@@ -900,11 +929,21 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {view !== "newround" && view !== "courses" && stats ? (
+        {view !== "newround" && view !== "courses" && view !== "profiles" &&
+          view !== "mine" && stats && !personalStats ? (
+          <Panel title="Spillerprofil">
+            <EmptyState>{currentPlayerLoading
+              ? "Finder din spillerprofil..."
+              : currentPlayerError || "Din konto er ikke koblet til en spiller."}</EmptyState>
+          </Panel>
+        ) : null}
+
+        {view !== "newround" && view !== "courses" && view !== "profiles" &&
+          stats && (view === "mine" || personalStats) ? (
           <div className={`content-stack ${loading ? "is-refreshing" : ""}`}>
-            {stats.stats.incomplete_entries.length > 0 ? (
+            {personalStats!.stats.incomplete_entries.length > 0 ? (
               <div className="warning-banner">
-                <strong>{stats.stats.incomplete_entries.length} ufuldst&#xE6;ndige spiller-runder</strong>
+                <strong>{personalStats!.stats.incomplete_entries.length} ufuldst&#xE6;ndige spiller-runder</strong>
                 <span>De er ikke medregnet i den f&#xE6;rdige statistik.</span>
               </div>
             ) : null}
@@ -1296,36 +1335,36 @@ export default function HomePage() {
                 <div className="kpi-grid">
                   <article className="kpi-card">
                     <span>Runder</span>
-                    <strong>{stats.stats.rounds}</strong>
-                    <small>{stats.stats.completed_rounds} med komplette scores</small>
+                    <strong>{personalStats!.stats.rounds}</strong>
+                    <small>{personalStats!.stats.completed_rounds} med komplette scores</small>
                   </article>
                   <article className="kpi-card">
-                    <span>Spillere</span>
-                    <strong>{playerStats.length}</strong>
-                    <small>i det valgte filter</small>
+                    <span>Spiller</span>
+                    <strong>{currentPlayer?.name ?? "-"}</strong>
+                    <small>din profil</small>
                   </article>
                   <article className="kpi-card">
                     <span>Spiller-runder</span>
-                    <strong>{stats.stats.player_round_results}</strong>
+                    <strong>{personalStats!.stats.player_round_results}</strong>
                     <small>komplette individuelle runder</small>
                   </article>
                   <article className="kpi-card accent-kpi">
                     <span>Seneste runde</span>
                     <strong>
-                      {stats.stats.last_five_scorecards[0]
-                        ? `#${stats.stats.last_five_scorecards[0].round_number}`
+                      {personalStats!.stats.last_five_scorecards[0]
+                        ? `#${personalStats!.stats.last_five_scorecards[0].round_number}`
                         : "\u2013"}
                     </strong>
                     <small>
-                      {stats.stats.last_five_scorecards[0]
-                        ? stats.stats.last_five_scorecards[0].course_name
+                      {personalStats!.stats.last_five_scorecards[0]
+                        ? personalStats!.stats.last_five_scorecards[0].course_name
                         : "Ingen data"}
                     </small>
                   </article>
                 </div>
 
                 <Panel
-                  title="Spilleroverblik"
+                  title="Mit spilleroverblik"
                   subtitle="Rating og handicap bruger spillerens fem seneste komplette runder."
                 >
                   {playerStats.length === 0 ? (
@@ -1394,14 +1433,14 @@ export default function HomePage() {
 
             {view === "scorecards" ? (
               <Panel
-                title="De fem seneste scorecards"
+                title="Mine fem seneste scorecards"
                 subtitle={"Sorteret efter round_number, s\u00e5 historiske Last Modified-datoer ikke \u00e6ndrer r\u00e6kkef\u00f8lgen."}
               >
-                {stats.stats.last_five_scorecards.length === 0 ? (
+                {personalStats!.stats.last_five_scorecards.length === 0 ? (
                   <EmptyState>Ingen scorecards i det valgte filter.</EmptyState>
                 ) : (
                   <div className="scorecard-grid">
-                    {stats.stats.last_five_scorecards.map((scorecard) => (
+                    {personalStats!.stats.last_five_scorecards.map((scorecard) => (
                       <ScorecardTable key={scorecard.round_id} scorecard={scorecard} />
                     ))}
                   </div>
@@ -1410,58 +1449,24 @@ export default function HomePage() {
             ) : null}
 
             {view === "headtohead" ? (
-              <Panel
-                title="Head-to-head winrate"
-                subtitle={"Solo-runder t\u00e6ller ikke i head-to-head. Laveste score vinder."}
-              >
-                {playerStats.length === 0 ? (
-                  <EmptyState>Ingen head-to-head-data.</EmptyState>
+              <Panel title="Mit head-to-head"
+                subtitle="Dine direkte opg&#xF8;r mod andre spillere. Solo-runder t&#xE6;ller ikke.">
+                {!myStats || myStats.headToHead.length === 0 ? (
+                  <EmptyState>Ingen head-to-head-data i det valgte filter.</EmptyState>
                 ) : (
                   <div className="table-scroll">
-                    <table className="stats-table matrix-table">
-                      <thead>
-                        <tr>
-                          <th>Spiller</th>
-                          {playerStats.map((player) => (
-                            <th key={player.player_id}>{player.player_name}</th>
-                          ))}
+                    <table className="stats-table">
+                      <thead><tr>
+                        <th>Modstander</th><th>Kampe</th><th>Sejre</th>
+                        <th>Nederlag</th><th>Uafgjort</th><th>Winrate</th>
+                      </tr></thead>
+                      <tbody>{myStats.headToHead.map((row) => (
+                        <tr key={row.opponent_id}>
+                          <th>{row.opponent_name}</th><td>{row.games}</td>
+                          <td>{row.wins}</td><td>{row.losses}</td>
+                          <td>{row.ties}</td><td className="rating-cell">{formatPercent(row.win_rate)}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {playerStats.map((rowPlayer) => (
-                          <tr key={rowPlayer.player_id}>
-                            <th>{rowPlayer.player_name}</th>
-                            {playerStats.map((columnPlayer) => {
-                              if (rowPlayer.player_id === columnPlayer.player_id) {
-                                return (
-                                  <td className="matrix-diagonal" key={columnPlayer.player_id}>
-                                    &#x2013;
-                                  </td>
-                                );
-                              }
-                              const value = headToHeadCell(
-                                rowPlayer.player_id,
-                                columnPlayer.player_id,
-                                stats.stats.head_to_head,
-                              );
-                              return (
-                                <td key={columnPlayer.player_id}>
-                                  {value && value.games > 0 ? (
-                                    <>
-                                      <strong>{formatPercent(value.rate)}</strong>
-                                      <span className="muted-cell">
-                                        {value.wins}/{value.games}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    "\u2013"
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
+                      ))}</tbody>
                     </table>
                   </div>
                 )}
@@ -1470,7 +1475,7 @@ export default function HomePage() {
 
             {view === "shots" ? (
               <Panel
-                title="Shot counts"
+                title="Mine slagtyper"
                 subtitle="Andel af alle spillede huller i det valgte filter."
               >
                 <div className="table-scroll">
@@ -1486,7 +1491,7 @@ export default function HomePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {stats.stats.shot_counts.map((player) => (
+                      {personalStats!.stats.shot_counts.map((player) => (
                         <tr key={player.player_id}>
                           <th>{player.player_name}</th>
                           <td>{player.holes_played}</td>
@@ -1516,12 +1521,12 @@ export default function HomePage() {
 
             {view === "frontback" ? (
               <div className="content-stack">
-                {stats.stats.front_back.length === 0 ? (
+                {personalStats!.stats.front_back.length === 0 ? (
                   <Panel title="Front / Back">
                     <EmptyState>Ingen banedata i det valgte filter.</EmptyState>
                   </Panel>
                 ) : (
-                  stats.stats.front_back.map((course) => (
+                  personalStats!.stats.front_back.map((course) => (
                     <Panel
                       key={course.course_id}
                       title={`Clutch or crumble \u00b7 ${course.course_name}`}
@@ -1565,11 +1570,11 @@ export default function HomePage() {
 
             {view === "best" ? (
               <Panel
-                title="Hver spillers bedste runde"
+                title="Min bedste runde"
                 subtitle={"Bedste score m\u00e5lt mod par; laveste score bryder lighed."}
               >
                 <div className="best-round-grid">
-                  {stats.stats.best_rounds.map((item) => (
+                  {personalStats!.stats.best_rounds.map((item) => (
                     <article className="best-round-card" key={item.player_id}>
                       <span>{item.player_name}</span>
                       <strong>{bestRoundLabel(item)}</strong>
@@ -1591,12 +1596,12 @@ export default function HomePage() {
 
             {view === "holes" ? (
               <div className="content-stack">
-                {stats.stats.hole_stats.length === 0 ? (
+                {personalStats!.stats.hole_stats.length === 0 ? (
                   <Panel title="Hulstatistik">
                     <EmptyState>Ingen hulstatistik i det valgte filter.</EmptyState>
                   </Panel>
                 ) : (
-                  stats.stats.hole_stats.map((course) => (
+                  personalStats!.stats.hole_stats.map((course) => (
                     <Panel
                       key={course.course_id}
                       title={`Hulgennemsnit \u00b7 ${course.course_name}`}
@@ -1655,7 +1660,7 @@ export default function HomePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {stats.stats.best_worst_holes.map((item) => (
+                      {personalStats!.stats.best_worst_holes.map((item) => (
                         <tr key={`${item.course_id}:${item.player_id}`}>
                           <td>{item.course_name}</td>
                           <th>{item.player_name}</th>
@@ -1673,11 +1678,11 @@ export default function HomePage() {
 
             {view === "rating" ? (
               <Panel
-                title="Rating progression"
+                title="Min rating progression"
                 subtitle={"Historikken f\u00f8lger round_number, s\u00e5 runde 1 \u2192 2 \u2192 3 altid er den rigtige r\u00e6kkef\u00f8lge."}
               >
                 <div className="chart-grid">
-                  {stats.stats.rating_history.map((item) => (
+                  {personalStats!.stats.rating_history.map((item) => (
                     <RatingChart key={item.player_id} item={item} />
                   ))}
                 </div>
