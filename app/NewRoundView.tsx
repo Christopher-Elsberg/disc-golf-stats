@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { savePendingRound, type PendingRound } from "@/lib/offline-rounds";
 import { evaluateRatingFormula, validateRatingFormula } from "@/lib/rating-formula";
-
+import {getRoundDraft, saveRoundDraft, deleteRoundDraft, type RoundDraft } from "@/lib/round-drafts";
 type PlayerOption = {
   id: string;
   name: string;
@@ -118,6 +118,15 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [draftLoaded, setDraftLoaded] = useState(false);
+const [draftActive, setDraftActive] = useState(false);
+const [draftLayoutVersion, setDraftLayoutVersion] =
+  useState<number | null>(null);
+const [draftStatus, setDraftStatus] = useState("");
+
+const draftWrites = useRef<Promise<unknown>>(
+  Promise.resolve(),
+);
 
   const isNewCourse = courseId === NEW_COURSE;
   const selectedCourse = useMemo(
@@ -184,7 +193,53 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
       cancelled = true;
     };
   }, [currentUserId]);
+useEffect(() => {
+  if (loadingSetup) return;
 
+  let cancelled = false;
+
+  async function restoreDraft() {
+    try {
+      const saved = await getRoundDraft(currentUserId);
+
+      if (cancelled) return;
+
+      if (saved) {
+        setCourseId(saved.courseId);
+        setDraftLayoutVersion(saved.layoutVersion);
+
+        setSelectedPlayers(saved.selectedPlayers);
+        setPlayedOn(saved.playedOn);
+        setScores(saved.scores);
+
+        setNewCourseLocalId(saved.newCourseLocalId);
+        setNewCourseName(saved.newCourseName);
+        setNewCourseLocation(saved.newCourseLocation);
+        setNewCourseRatingFormula(
+          saved.newCourseRatingFormula,
+        );
+
+        setDraftHoles(saved.draftHoles);
+        setDraftActive(true);
+
+        setDraftStatus("Din ufærdige runde er genskabt.");
+      }
+
+      setDraftLoaded(true);
+    } catch (err) {
+      if (cancelled) return;
+
+      setDraftStatus("Kunne ikke hente gemt runde.");
+      console.error(err);
+    }
+  }
+
+  void restoreDraft();
+
+  return () => {
+    cancelled = true;
+  };
+}, [loadingSetup, currentUserId]);
   useEffect(() => {
     if (!isNewCourse) return;
     if (!newCourseLocalId) setNewCourseLocalId(crypto.randomUUID());
