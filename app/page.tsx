@@ -963,7 +963,15 @@ export default function HomePage() {
     }
   />
 </div>
-
+        
+{view === "courses" ? (
+  <EditCoursesView
+    onSaved={() =>
+      setStatsRefreshKey((value) => value + 1)
+    }
+  />
+) : null}
+        
         {view === "profiles" && currentPlayer ? (
   <FindPlayersView
     currentPlayerId={currentPlayer.id}
