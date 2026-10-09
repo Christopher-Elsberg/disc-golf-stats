@@ -964,9 +964,14 @@ export default function HomePage() {
   />
 </div>
 
-        {view === "profiles" && stats ? (
-          <FindPlayersView stats={stats} currentPlayerId={currentPlayer?.id ?? null} />
-        ) : null}
+        {view === "profiles" && currentPlayer ? (
+  <FindPlayersView
+    currentPlayerId={currentPlayer.id}
+    season={season}
+    courseId={courseId}
+    onRelationshipsChanged={() => setStatsRefreshKey((value) => value + 1)}
+  />
+) : null}
 
         {view !== "newround" && view !== "courses" && loading && !stats ? <LoadingScreen /> : null}
 
