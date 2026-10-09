@@ -43,3 +43,15 @@
 .holeSections { display:grid; gap:12px; min-width:0; }
 .section[id], .kpis[id], .holeSections[id] { scroll-margin-top:20px; }
 @media(max-width:650px) { .profileNav { display:flex; flex-wrap:nowrap; max-width:100%; overflow-x:auto; padding-bottom:5px; -webkit-overflow-scrolling:touch; } .profileNav a { padding:7px 10px; } }
+
+/* Friends controls, kept isolated from global mobile CSS. */
+.requests { margin: 12px 0; border: 1px solid rgba(19,163,123,.25); border-radius: 12px; padding: 12px; }
+.requestRow { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0; flex-wrap:wrap; }
+.actions { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+.actions button { border-radius:9px; border:1px solid #0f8568; background:#0f8568; color:#fff; padding:8px 10px; font:inherit; font-size:.77rem; cursor:pointer; }
+.actions button:disabled { opacity:.5; cursor:wait; }
+.actions .quietButton { background:transparent; color:inherit; border-color:rgba(130,130,130,.4); }
+@media(max-width:480px) { .actions { justify-content:flex-start; } .result { align-items:flex-start; flex-wrap:wrap; } .result .actions { width:100%; padding-left:48px; } }
+
+.headerRow { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.refreshButton { border:1px solid rgba(125,135,145,.4); border-radius:9px; padding:8px 10px; background:transparent; color:inherit; font:inherit; font-size:.78rem; cursor:pointer; }

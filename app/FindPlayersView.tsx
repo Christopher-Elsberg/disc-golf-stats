@@ -5,11 +5,20 @@ import { supabase } from "@/lib/supabase";
 import type { Scorecard, StatsResponse } from "@/types/stats";
 import styles from "./FindPlayersView.module.css";
 
-type PublicPlayer = { id: string; name: string; active: boolean };
+type PublicPlayer = { id: string; name: string; active: boolean; auth_user_id: string | null };
+type Friendship = {
+  id: string;
+  requester_id: string;
+  recipient_id: string;
+  status: "pending" | "accepted";
+  created_at: string;
+};
 
 type Props = {
-  stats: StatsResponse;
   currentPlayerId: string | null;
+  season: string;
+  courseId: string;
+  onRelationshipsChanged?: () => void;
 };
 
 function num(value: number | null | undefined, digits = 1): string {
@@ -103,30 +112,120 @@ function RatingPlot({ values }: { values: Array<{ round_number: number; rating: 
   );
 }
 
-export default function FindPlayersView({ stats, currentPlayerId }: Props) {
+export default function FindPlayersView({ currentPlayerId, season, courseId, onRelationshipsChanged }: Props) {
   const [query, setQuery] = useState("");
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
+  const [relationships, setRelationships] = useState<Friendship[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [profileStats, setProfileStats] = useState<StatsResponse | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const profileRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busyActionId, setBusyActionId] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  async function refreshRelationships() {
+    const { data, error: friendshipError } = await supabase
+      .from("friendships")
+      .select("id,requester_id,recipient_id,status,created_at");
+    if (friendshipError) throw friendshipError;
+    setRelationships((data ?? []) as Friendship[]);
+  }
 
   useEffect(() => {
     let cancelled = false;
     async function loadPlayers() {
       setLoading(true);
-      const { data, error: queryError } = await supabase
-        .from("players")
-        .select("id,name,active")
-        .order("name", { ascending: true });
+      const [playersResult, roleResult, friendsResult] = await Promise.all([
+        supabase.from("players").select("id,name,active,auth_user_id").order("name", { ascending: true }),
+        currentPlayerId
+          ? supabase.from("players").select("role").eq("id", currentPlayerId).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabase.from("friendships").select("id,requester_id,recipient_id,status,created_at"),
+      ]);
       if (cancelled) return;
-      if (queryError) setError(queryError.message);
-      else setPlayers((data ?? []) as PublicPlayer[]);
+      const loadError = playersResult.error || roleResult.error || friendsResult.error;
+      if (loadError) setError(loadError.message);
+      else {
+        const admin = roleResult.data?.role === "admin";
+        setPlayers(((playersResult.data ?? []) as PublicPlayer[]).filter((p) => admin || p.active));
+        setRelationships((friendsResult.data ?? []) as Friendship[]);
+        setIsAdmin(admin);
+      }
       setLoading(false);
     }
     void loadPlayers();
     return () => { cancelled = true; };
-  }, []);
+  }, [currentPlayerId]);
+
+  function relationFor(playerId: string): Friendship | undefined {
+    return relationships.find((f) =>
+      (f.requester_id === currentPlayerId && f.recipient_id === playerId) ||
+      (f.recipient_id === currentPlayerId && f.requester_id === playerId));
+  }
+
+  function canView(playerId: string): boolean {
+    return isAdmin || playerId === currentPlayerId || relationFor(playerId)?.status === "accepted";
+  }
+
+  async function action(playerId: string, op: "send" | "accept" | "reject" | "remove") {
+    const relation = relationFor(playerId);
+    setBusyActionId(playerId);
+    setError("");
+    try {
+      let result;
+      if (op === "send") {
+        result = await supabase.rpc("send_disc_golf_friend_request", { p_recipient_id: playerId });
+      } else if (op === "remove") {
+        result = await supabase.rpc("remove_disc_golf_friendship", { p_friendship_id: relation?.id });
+      } else {
+        result = await supabase.rpc("respond_disc_golf_friend_request", {
+          p_request_id: relation?.id,
+          p_accept: op === "accept",
+        });
+      }
+      if (result.error) throw result.error;
+      await refreshRelationships();
+      onRelationshipsChanged?.();
+      if (op === "remove" && selectedId === playerId && !isAdmin) setSelectedId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyActionId(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedId || !canView(selectedId)) {
+      setProfileStats(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadProfile() {
+      setProfileLoading(true);
+      setProfileError("");
+      setProfileStats(null);
+      const body: Record<string, string | number> = { player_id: selectedId! };
+      if (season !== "all") body.season = Number(season);
+      if (courseId !== "all") body.course_id = courseId;
+      try {
+        const { data, error: requestError } = await supabase.functions.invoke(
+          "disc-golf-stats", { body },
+        );
+        if (requestError) throw requestError;
+        if (data?.error) throw new Error(String(data.error));
+        if (!cancelled) setProfileStats(data as StatsResponse);
+      } catch (err) {
+        if (!cancelled) setProfileError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    }
+    void loadProfile();
+    return () => { cancelled = true; };
+  }, [selectedId, season, courseId, currentPlayerId, isAdmin, relationships]);
 
   useEffect(() => {
     if (selectedId) profileRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -134,41 +233,75 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
 
   const matches = useMemo(() => {
     const search = query.trim().toLocaleLowerCase("da-DK");
-    return players.filter((p) => p.name.toLocaleLowerCase("da-DK").includes(search));
+    return players.filter((player) =>
+      player.name.toLocaleLowerCase("da-DK").includes(search));
   }, [players, query]);
-  const selected = players.find((p) => p.id === selectedId) ?? null;
-  const p = selected ? stats.stats.player_stats.find((row) => row.player_id === selected.id) : null;
-  const shot = selected ? stats.stats.shot_counts.find((row) => row.player_id === selected.id) : null;
-  const best = selected ? stats.stats.best_rounds.find((row) => row.player_id === selected.id)?.best_round : null;
-  const history = selected ? stats.stats.rating_history.find((row) => row.player_id === selected.id)?.history ?? [] : [];
+
+  const incoming = relationships.filter((f) =>
+    f.recipient_id === currentPlayerId && f.status === "pending");
+  const accepted = relationships.filter((f) => f.status === "accepted");
+  const selected = players.find((player) => player.id === selectedId) ?? null;
+  const p = selected ? profileStats?.stats.player_stats.find((row) => row.player_id === selected.id) : null;
+  const shot = selected ? profileStats?.stats.shot_counts.find((row) => row.player_id === selected.id) : null;
+  const best = selected ? profileStats?.stats.best_rounds.find((row) => row.player_id === selected.id)?.best_round : null;
+  const history = selected ? profileStats?.stats.rating_history.find((row) => row.player_id === selected.id)?.history ?? [] : [];
   const recent = [...history].sort((a, b) => b.round_number - a.round_number).slice(0, 5);
-  const cards = selected
-    ? (stats.stats.player_last_five_scorecards?.[selected.id] ??
-      stats.stats.last_five_scorecards.filter((round) => round.players.some((v) => v.player_id === selected.id)))
+  const cards = selected && profileStats
+    ? (profileStats.stats.player_last_five_scorecards?.[selected.id] ??
+      profileStats.stats.last_five_scorecards.filter((round) =>
+        round.players.some((v) => v.player_id === selected.id)))
         .map((round) => ({ ...round, players: round.players.filter((v) => v.player_id === selected.id) }))
     : [];
-  const headToHead = selected ? stats.stats.head_to_head.filter((row) =>
-    row.player_1_id === selected.id || row.player_2_id === selected.id
-  ) : [];
-  const frontBack = selected ? stats.stats.front_back.flatMap((course) => {
+  const headToHead = selected ? profileStats?.stats.head_to_head.filter((row) =>
+    row.player_1_id === selected.id || row.player_2_id === selected.id) ?? [] : [];
+  const frontBack = selected ? profileStats?.stats.front_back.flatMap((course) => {
     const row = course.players.find((player) => player.player_id === selected.id);
     return row && row.rounds > 0 ? [{ ...row, course_name: course.course_name, front_label: course.front_label, back_label: course.back_label }] : [];
-  }) : [];
-  const bestWorst = selected ? stats.stats.best_worst_holes.filter((row) =>
-    row.player_id === selected.id && (row.best_hole !== null || row.worst_hole !== null)) : [];
-  const holeStats = selected ? stats.stats.hole_stats.map((course) => ({
+  }) ?? [] : [];
+  const bestWorst = selected ? profileStats?.stats.best_worst_holes.filter((row) =>
+    row.player_id === selected.id && (row.best_hole !== null || row.worst_hole !== null)) ?? [] : [];
+  const holeStats = selected ? profileStats?.stats.hole_stats.map((course) => ({
     ...course,
     holes: course.holes.flatMap((hole) => {
       const row = hole.players.find((player) => player.player_id === selected.id);
       return row && row.all_time_samples > 0 ? [{ ...hole, player: row }] : [];
     }),
-  })).filter((course) => course.holes.length > 0) : [];
+  })).filter((course) => course.holes.length > 0) ?? [] : [];
 
   return (
     <div className={styles.root}>
       <section className={styles.section}>
-        <h2>Find en spiller</h2>
-        <p className={styles.muted}>S&#xF8;g efter navn, og &#xE5;bn en profil for at se spillerens statistik i det valgte s&#xE6;son- og banefilter.</p>
+        <div className={styles.headerRow}>
+          <h2>Find spillere og venner</h2>
+          <button type="button" className={styles.refreshButton}
+            onClick={() => void refreshRelationships().catch((err) => setError(String(err)))}>
+            Opdater anmodninger
+          </button>
+        </div>
+        <p className={styles.muted}>
+          S&#xF8;g efter spillere, send en venneanmodning, og se alle stats n&#xE5;r I er venner.
+          {isAdmin ? " Som admin kan du se alle profiler." : ""}
+        </p>
+        {incoming.length > 0 ? (
+          <div className={styles.requests}>
+            <h3>Venneanmodninger ({incoming.length})</h3>
+            {incoming.map((relation) => {
+              const player = players.find((p) => p.id === relation.requester_id);
+              return (
+                <div className={styles.requestRow} key={relation.id}>
+                  <strong>{player?.name ?? "Spiller"}</strong>
+                  <div className={styles.actions}>
+                    <button type="button" disabled={!!busyActionId}
+                      onClick={() => void action(relation.requester_id, "accept")}>Accepter</button>
+                    <button type="button" disabled={!!busyActionId}
+                      onClick={() => void action(relation.requester_id, "reject")}>Afvis</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+        <p className={styles.muted}>Du har {accepted.length} {accepted.length === 1 ? "ven" : "venner"}.</p>
         <label className={styles.searchLabel} htmlFor="player-search">S&#xF8;g efter spiller</label>
         <input id="player-search" type="search" value={query}
           onChange={(e) => setQuery(e.target.value)} placeholder="Skriv et spillernavn..."
@@ -178,23 +311,44 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
           <div className={styles.results}>
             {matches.length === 0 ? <p className={styles.muted}>Ingen spillere matcher din s&#xF8;gning.</p> : null}
             {matches.map((player) => {
-              const stat = stats.stats.player_stats.find((item) => item.player_id === player.id);
-              return <button type="button" key={player.id}
-                className={`${styles.result} ${selectedId === player.id ? styles.selected : ""}`}
-                onClick={() => setSelectedId(player.id)} aria-pressed={selectedId === player.id}>
-                <span className={styles.avatar}>{player.name.slice(0, 1).toLocaleUpperCase("da-DK")}</span>
-                <span className={styles.playerName}>
-                  <strong>{player.name}{player.id === currentPlayerId ? " (dig)" : ""}</strong>
-                  <small>{stat?.rounds_played ?? 0} runder</small>
-                </span>
-                <span className={styles.rating}>{stat?.rating == null ? "-" : num(stat.rating, 0)}<small>rating</small></span>
-              </button>;
+              const relation = relationFor(player.id);
+              const viewAllowed = canView(player.id);
+              const pendingOut = relation?.status === "pending" && relation.requester_id === currentPlayerId;
+              const pendingIn = relation?.status === "pending" && relation.recipient_id === currentPlayerId;
+              return (
+                <div key={player.id} className={`${styles.result} ${selectedId === player.id ? styles.selected : ""}`}>
+                  <span className={styles.avatar}>{player.name.slice(0, 1).toLocaleUpperCase("da-DK")}</span>
+                  <span className={styles.playerName}>
+                    <strong>{player.name}{player.id === currentPlayerId ? " (dig)" : ""}</strong>
+                    <small>{relation?.status === "accepted" ? "Ven" : pendingIn ? "Afventer dit svar" : pendingOut ? "Anmodning sendt" : viewAllowed ? "Profil tilg\u00e6ngelig" : !player.auth_user_id ? "Ingen login-konto" : !player.active ? "Inaktiv profil" : "Ikke venner endnu"}</small>
+                  </span>
+                  <div className={styles.actions}>
+                    {viewAllowed ? (
+                      <button type="button" onClick={() => setSelectedId(player.id)}
+                        aria-pressed={selectedId === player.id}>Se stats</button>
+                    ) : !relation && player.auth_user_id && player.active ? (
+                      <button type="button" disabled={!!busyActionId}
+                        onClick={() => void action(player.id, "send")}>Tilf&#xF8;j ven</button>
+                    ) : pendingIn ? (
+                      <button type="button" disabled={!!busyActionId}
+                        onClick={() => void action(player.id, "accept")}>Accepter</button>
+                    ) : null}
+                    {relation?.status === "accepted" && player.id !== currentPlayerId ? (
+                      <button type="button" className={styles.quietButton} disabled={!!busyActionId}
+                        onClick={() => void action(player.id, "remove")}>Fjern ven</button>
+                    ) : pendingOut ? (
+                      <button type="button" className={styles.quietButton} disabled={!!busyActionId}
+                        onClick={() => void action(player.id, "remove")}>Annuller</button>
+                    ) : null}
+                  </div>
+                </div>
+              );
             })}
           </div>
         )}
       </section>
 
-      {selected ? (
+      {selected && canView(selected.id) ? (
         <div ref={profileRef} className={styles.profile}>
           <header className={styles.profileHeader}>
             <div className={styles.avatarLarge}>{selected.name.slice(0, 1).toLocaleUpperCase("da-DK")}</div>
@@ -202,6 +356,10 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
             <button className={styles.close} type="button" onClick={() => setSelectedId(null)}>Luk profil</button>
           </header>
 
+          {profileLoading ? <p className={styles.muted}>Henter profilstatistik...</p> : null}
+          {profileError ? <p role="alert" className={styles.error}>{profileError}</p> : null}
+          {!profileLoading && !profileStats && !profileError ? <p>Ingen stats at vise.</p> : null}
+          {profileStats ? <>
           <nav className={styles.profileNav} aria-label="Statistik p\u00e5 spillerprofilen">
             {[
               ["#profile-overview", "Overblik"],
@@ -320,6 +478,7 @@ export default function FindPlayersView({ stats, currentPlayerId }: Props) {
                 <p className={styles.muted}>Ingen scorecards i filteret.</p>}
             </Box>
           </>}
+          </> : null}
         </div>
       ) : <p className={styles.hint}>V&#xE6;lg en spiller ovenfor for at &#xE5;bne profilen.</p>}
     </div>
