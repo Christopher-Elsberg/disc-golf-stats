@@ -38,7 +38,7 @@ type AuthMode = "login" | "signup";
 const MAIN_MENU: Array<{ id: View; label: string; icon: string }> = [
   { id: "newround", label: "Ny runde", icon: "+" },
   { id: "myoverview", label: "Mit overblik", icon: "\u25c8" },
-  { id: "profiles", label: "Find spillere", icon: "\u2315" },
+  { id: "profiles", label: "Venner og spillere", icon: "\u2315" },
   { id: "courses", label: "Rediger baner", icon: "\u270e" },
 ];
 
