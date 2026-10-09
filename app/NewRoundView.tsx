@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { savePendingRound, type PendingRound } from "@/lib/offline-rounds";
 import { evaluateRatingFormula, validateRatingFormula } from "@/lib/rating-formula";
-import {getRoundDraft, saveRoundDraft, deleteRoundDraft, type RoundDraft } from "@/lib/round-drafts";
+import { getRoundDraft, saveRoundDraft, deleteRoundDraft, type RoundDraft } from "@/lib/round-drafts";
+
 type PlayerOption = {
   id: string;
   name: string;
@@ -118,15 +119,13 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [draftLoaded, setDraftLoaded] = useState(false);
-const [draftActive, setDraftActive] = useState(false);
-const [draftLayoutVersion, setDraftLayoutVersion] =
-  useState<number | null>(null);
-const [draftStatus, setDraftStatus] = useState("");
-
-const draftWrites = useRef<Promise<unknown>>(
-  Promise.resolve(),
-);
+  // A draft is only written after a real user edit, not during setup/restoration.
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftActive, setDraftActive] = useState(false);
+  const [draftLayoutVersion, setDraftLayoutVersion] = useState<number | null>(null);
+  const [draftStatus, setDraftStatus] = useState("");
+  const draftWrites = useRef<Promise<void>>(Promise.resolve());
+  const draftWriteNumber = useRef(0);
 
   const isNewCourse = courseId === NEW_COURSE;
   const selectedCourse = useMemo(
@@ -193,63 +192,97 @@ const draftWrites = useRef<Promise<unknown>>(
       cancelled = true;
     };
   }, [currentUserId]);
-useEffect(() => {
-  if (loadingSetup) return;
 
-  let cancelled = false;
-
-  async function restoreDraft() {
-    try {
-      const saved = await getRoundDraft(currentUserId);
-
-      if (cancelled) return;
-
-      if (saved) {
-        setCourseId(saved.courseId);
-        setDraftLayoutVersion(saved.layoutVersion);
-
-        setSelectedPlayers(saved.selectedPlayers);
-        setPlayedOn(saved.playedOn);
-        setScores(saved.scores);
-
-        setNewCourseLocalId(saved.newCourseLocalId);
-        setNewCourseName(saved.newCourseName);
-        setNewCourseLocation(saved.newCourseLocation);
-        setNewCourseRatingFormula(
-          saved.newCourseRatingFormula,
-        );
-
-        setDraftHoles(saved.draftHoles);
-        setDraftActive(true);
-
-        setDraftStatus("Din ufærdige runde er genskabt.");
-      }
-
-      setDraftLoaded(true);
-    } catch (err) {
-      if (cancelled) return;
-
-      setDraftStatus("Kunne ikke hente gemt runde.");
-      console.error(err);
-    }
-  }
-
-  void restoreDraft();
-
-  return () => {
-    cancelled = true;
-  };
-}, [loadingSetup, currentUserId]);
+  // Restore after players/courses have loaded, before fetching course holes.
   useEffect(() => {
-    if (!isNewCourse) return;
+    if (loadingSetup) return;
+    let cancelled = false;
+
+    async function restoreDraft() {
+      try {
+        const saved = await getRoundDraft(currentUserId);
+        if (cancelled) return;
+        if (saved) {
+          setCourseId(saved.courseId);
+          setDraftLayoutVersion(saved.layoutVersion);
+          setSelectedPlayers(saved.selectedPlayers);
+          setPlayedOn(saved.playedOn);
+          setScores(saved.scores);
+          setNewCourseLocalId(saved.newCourseLocalId);
+          setNewCourseName(saved.newCourseName);
+          setNewCourseLocation(saved.newCourseLocation);
+          setNewCourseRatingFormula(saved.newCourseRatingFormula);
+          setDraftHoles(saved.draftHoles);
+          setDraftActive(true);
+          setDraftStatus("Uafsluttet runde genskabt fra telefonen.");
+        }
+        setDraftReady(true);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Kunne ikke indlaese rundekladde:", err);
+        setDraftStatus("Kunne ikke hente din lokale rundekladde. Kontroller lageradgangen.");
+        // Do not enable autosave after a failed read: it could overwrite the old draft.
+      }
+    }
+    void restoreDraft();
+    return () => { cancelled = true; };
+  }, [loadingSetup, currentUserId]);
+
+  // Serialize IndexedDB writes to prevent older edits overwriting newer edits.
+  useEffect(() => {
+    if (!draftReady || !draftActive || loadingSetup || saving) return;
+
+    const draft: RoundDraft = {
+      userId: currentUserId,
+      courseId,
+      layoutVersion: isNewCourse ? 1 : (draftLayoutVersion ?? selectedCourse?.current_layout_version ?? 1),
+      selectedPlayers,
+      playedOn,
+      scores,
+      newCourseLocalId,
+      newCourseName,
+      newCourseLocation,
+      newCourseRatingFormula,
+      draftHoles,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const writeNumber = ++draftWriteNumber.current;
+    setDraftStatus("Gemmer kladde\u2026");
+    const write = draftWrites.current.catch(() => undefined).then(async () => {
+      await saveRoundDraft(draft);
+    });
+    draftWrites.current = write;
+    void write.then(
+      () => {
+        if (writeNumber === draftWriteNumber.current) {
+          setDraftStatus("Kladde gemt p\u00e5 telefonen");
+        }
+      },
+      (err) => {
+        console.error("Kunne ikke gemme rundekladde:", err);
+        if (writeNumber === draftWriteNumber.current) {
+          setDraftStatus("Fejl ved lokal gemning. Luk ikke appen f\u00f8r det er l\u00f8st.");
+        }
+      },
+    );
+  }, [
+    draftReady, draftActive, loadingSetup, saving, currentUserId, courseId,
+    draftLayoutVersion, selectedCourse?.current_layout_version, isNewCourse,
+    selectedPlayers, playedOn, scores, newCourseLocalId,
+    newCourseName, newCourseLocation, newCourseRatingFormula, draftHoles,
+  ]);
+
+  useEffect(() => {
+    if (!draftReady || !isNewCourse) return;
     if (!newCourseLocalId) setNewCourseLocalId(crypto.randomUUID());
   }, [isNewCourse, newCourseLocalId]);
 
   useEffect(() => {
+    if (!draftReady) return;
     if (!courseId || isNewCourse) {
       setHoles([]);
       setLoadingHoles(false);
-      setScores({});
       return;
     }
 
@@ -260,7 +293,7 @@ useEffect(() => {
       setError("");
       setSuccess("");
 
-      const layoutVersion = selectedCourse?.current_layout_version ?? 1;
+      const layoutVersion = draftLayoutVersion ?? selectedCourse?.current_layout_version ?? 1;
       const { data, error: holesError } = await supabase
         .from("course_holes")
         .select("id,score_index,hole_label,display_order,par")
@@ -271,10 +304,9 @@ useEffect(() => {
       if (cancelled) return;
 
       if (holesError) {
-        const cached = readHolesCache(courseId, selectedCourse?.current_layout_version ?? 1);
+        const cached = readHolesCache(courseId, layoutVersion);
         if (cached) {
           setHoles(cached);
-          setScores({});
         } else {
           setError(`Kunne ikke hente banens huller, og de findes ikke i offline-cache: ${holesError.message}`);
           setHoles([]);
@@ -282,8 +314,7 @@ useEffect(() => {
       } else {
         const rows = (data ?? []) as CourseHole[];
         setHoles(rows);
-        writeHolesCache(courseId, selectedCourse?.current_layout_version ?? 1, rows);
-        setScores({});
+        writeHolesCache(courseId, layoutVersion, rows);
       }
 
       setLoadingHoles(false);
@@ -294,7 +325,7 @@ useEffect(() => {
     return () => {
       cancelled = true;
     };
-  }, [courseId, isNewCourse, selectedCourse?.current_layout_version]);
+  }, [draftReady, courseId, isNewCourse, draftLayoutVersion, selectedCourse?.current_layout_version]);
 
   const selectedPlayerRows = useMemo(
     () => players.filter((player) => selectedPlayers.includes(player.id)),
@@ -330,6 +361,8 @@ useEffect(() => {
   }, [roundHoles, scores, selectedPlayerRows]);
 
   function handleCourseChange(value: string) {
+    setDraftActive(true);
+    setDraftLayoutVersion(null);
     setCourseId(value);
     setScores({});
     setError("");
@@ -341,6 +374,7 @@ useEffect(() => {
   }
 
   function togglePlayer(playerId: string) {
+    setDraftActive(true);
     setSuccess("");
     setError("");
     setSelectedPlayers((current) =>
@@ -353,6 +387,7 @@ useEffect(() => {
   function updateScore(playerId: string, holeId: string, value: string) {
     if (value !== "" && !/^\d{1,2}$/.test(value)) return;
 
+    setDraftActive(true);
     setSuccess("");
     setScores((current) => ({
       ...current,
@@ -364,6 +399,7 @@ useEffect(() => {
   }
 
   function addDraftHole() {
+    setDraftActive(true);
     const nextOrder = draftHoles.length + 1;
     const numericLabels = draftHoles
       .map((hole) => Number(hole.hole_label))
@@ -385,6 +421,7 @@ useEffect(() => {
   }
 
   function updateDraftHole(holeId: string, field: "hole_label" | "par", value: string) {
+    setDraftActive(true);
     setDraftHoles((current) =>
       current.map((hole) => {
         if (hole.id !== holeId) return hole;
@@ -399,6 +436,7 @@ useEffect(() => {
   }
 
   function removeDraftHole(holeId: string) {
+    setDraftActive(true);
     setDraftHoles((current) => {
       const remaining = current.filter((hole) => hole.id !== holeId);
       return remaining.map((hole, index) => ({
@@ -490,7 +528,7 @@ useEffect(() => {
         : {
             type: "existing" as const,
             id: courseId,
-            layout_version: selectedCourse?.current_layout_version ?? 1,
+            layout_version: draftLayoutVersion ?? selectedCourse?.current_layout_version ?? 1,
           };
 
       const pendingRound: PendingRound = {
@@ -510,8 +548,30 @@ useEffect(() => {
         status: "pending",
       };
 
+      // Never remove a draft before the finished round is safely in the offline queue.
       await savePendingRound(pendingRound);
+      setDraftActive(false);
+      ++draftWriteNumber.current; // Suppress stale "draft saved" status callbacks.
+
+      // Wait for any earlier draft writes before deleting the draft.
+      await draftWrites.current.catch(() => undefined);
+      let cleanupWarning = "";
+      try {
+        await deleteRoundDraft(currentUserId);
+      } catch (draftError) {
+        console.error("Runden blev gemt, men kladden kunne ikke slettes:", draftError);
+        cleanupWarning = " Rundekladen kunne ikke slettes automatisk.";
+      }
       setScores({});
+      setDraftLayoutVersion(null);
+      setDraftStatus(cleanupWarning);
+      if (isNewCourse) {
+        setNewCourseName("");
+        setNewCourseLocation("");
+        setNewCourseRatingFormula("");
+        setDraftHoles([]);
+        setNewCourseLocalId(null);
+      }
       onQueued();
 
       setSuccess(
@@ -526,7 +586,15 @@ useEffect(() => {
     }
   }
 
-  if (loadingSetup) {
+  if (!loadingSetup && !draftReady && draftStatus) {
+    return (
+      <section className="panel new-round-loading">
+        <p>{draftStatus}</p>
+        <p>Genindl\u00e6s siden, n\u00e5r din browsers lokale lager virker igen.</p>
+      </section>
+    );
+  }
+  if (loadingSetup || !draftReady) {
     return (
       <section className="panel new-round-loading">
         <div className="spinner" />
@@ -536,7 +604,12 @@ useEffect(() => {
   }
 
   return (
-    <div className="new-round-stack">
+    <div className="new-round-stack" aria-busy={saving} style={{ pointerEvents: saving ? "none" : undefined }}>
+      {draftStatus ? (
+        <div role="status" aria-live="polite" style={{ fontSize: "0.8rem", color: "var(--muted, #64748b)", padding: "4px 2px" }}>
+          {draftStatus}
+        </div>
+      ) : null}
       <section className="panel round-setup-panel">
         <div className="panel-heading">
           <div>
@@ -563,7 +636,7 @@ useEffect(() => {
             <input
               type="date"
               value={playedOn}
-              onChange={(event) => setPlayedOn(event.target.value)}
+              onChange={(event) => { setDraftActive(true); setPlayedOn(event.target.value); }}
               required
             />
           </label>
@@ -595,7 +668,7 @@ useEffect(() => {
                 <span>Banens navn</span>
                 <input
                   value={newCourseName}
-                  onChange={(event) => setNewCourseName(event.target.value)}
+                  onChange={(event) => { setDraftActive(true); setNewCourseName(event.target.value); }}
                   placeholder={"Fx \u00d8stre Anl\u00e6g Disc Golf"}
                 />
               </label>
@@ -604,7 +677,7 @@ useEffect(() => {
                 <span>Lokation</span>
                 <input
                   value={newCourseLocation}
-                  onChange={(event) => setNewCourseLocation(event.target.value)}
+                  onChange={(event) => { setDraftActive(true); setNewCourseLocation(event.target.value); }}
                   placeholder="Fx Aalborg"
                 />
               </label>
@@ -612,7 +685,7 @@ useEffect(() => {
                 <span>Ratingformel (valgfri)</span>
                 <input
                   value={newCourseRatingFormula}
-                  onChange={(event) => setNewCourseRatingFormula(event.target.value)}
+                  onChange={(event) => { setDraftActive(true); setNewCourseRatingFormula(event.target.value); }}
                   placeholder="Fx 1000 + 8.4 * (59 - score)"
                 />
                 <small>Tomt felt betyder, at banen ikke f&#xE5;r beregnet rating.</small>
@@ -820,4 +893,3 @@ useEffect(() => {
     </div>
   );
 }
-
