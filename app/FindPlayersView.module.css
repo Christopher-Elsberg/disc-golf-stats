@@ -4,8 +4,8 @@
 .muted { opacity:.7; font-size:.86rem; line-height:1.45; margin:5px 0 12px; }
 .searchLabel { display:block; font-size:.82rem; font-weight:700; margin:12px 0 6px; }
 .search { display:block; box-sizing:border-box; width:100%; min-width:0; padding:12px; font:inherit; font-size:16px; border:1px solid #96aaa3; border-radius:10px; background:var(--surface,#fff); color:inherit; }
-.results { display:grid; gap:8px; margin-top:14px; grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr)); }
-.result { width:100%; border:1px solid rgba(120,138,144,.25); background:rgba(130,150,150,.06); color:inherit; border-radius:12px; text-align:left; cursor:pointer; padding:10px; display:flex; align-items:center; gap:10px; min-width:0; }
+.results { display:grid; grid-template-columns:minmax(0,1fr); gap:9px; margin-top:14px; }
+.result { width:100%; box-sizing:border-box; border:1px solid rgba(120,138,144,.25); background:rgba(130,150,150,.06); color:inherit; border-radius:12px; text-align:left; padding:12px 14px; display:flex; align-items:center; gap:12px; min-width:0; }
 .result:hover, .selected { border-color:#13a37b; background:rgba(19,163,123,.09); }
 .avatar, .avatarLarge { background:#104e46; color:white; flex:none; border-radius:50%; display:grid; place-items:center; font-weight:750; width:38px; height:38px; }
 .avatarLarge { width:54px; height:54px; font-size:1.35rem; }
@@ -55,3 +55,18 @@
 
 .headerRow { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 .refreshButton { border:1px solid rgba(125,135,145,.4); border-radius:9px; padding:8px 10px; background:transparent; color:inherit; font:inherit; font-size:.78rem; cursor:pointer; }
+
+/* Full-width, compact friend rows. Keep actions aligned on desktop and mobile. */
+.friendsBlock { margin:16px 0 18px; display:grid; gap:9px; min-width:0; }
+.friendsHeading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.friendsHeading h3 { margin:0; }
+.friendCount { font-size:.78rem; font-weight:750; color:#11654f; background:rgba(19,163,123,.11); border-radius:999px; padding:5px 10px; }
+.friendList { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; }
+.friendRow { display:flex; align-items:center; gap:12px; min-width:0; box-sizing:border-box; padding:12px 14px; border:1px solid rgba(90,135,124,.23); border-radius:12px; background:rgba(19,163,123,.045); }
+.friendRow .actions { margin-left:auto; flex-shrink:0; }
+.friendRow .playerName small { color:#0d7359; opacity:1; font-weight:650; }
+@media (max-width:560px) {
+  .friendRow, .result { gap:9px; padding:11px 10px; align-items:center; flex-wrap:wrap; }
+  .friendRow .actions, .result .actions { width:100%; padding-left:47px; margin-left:0; justify-content:flex-start; }
+  .friendRow .actions button, .result .actions button { min-height:36px; }
+}

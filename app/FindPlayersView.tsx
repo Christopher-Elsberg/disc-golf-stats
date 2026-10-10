@@ -231,15 +231,34 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
     if (selectedId) profileRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedId]);
 
+  // Never show the signed-in user as their own friend/search result.
+  // Accepted friends have their own list below; typed searches may still find them.
+  const accepted = relationships.filter((relation) =>
+    relation.status === "accepted" &&
+    relation.requester_id !== relation.recipient_id &&
+    (relation.requester_id === currentPlayerId || relation.recipient_id === currentPlayerId));
+  const friends = accepted.flatMap((relation) => {
+    const friendId = relation.requester_id === currentPlayerId
+      ? relation.recipient_id : relation.requester_id;
+    const player = players.find((item) => item.id === friendId);
+    return player ? [{ player, relation }] : [];
+  }).sort((a, b) => a.player.name.localeCompare(b.player.name, "da-DK"));
   const matches = useMemo(() => {
     const search = query.trim().toLocaleLowerCase("da-DK");
-    return players.filter((player) =>
-      player.name.toLocaleLowerCase("da-DK").includes(search));
-  }, [players, query]);
-
+    return players.filter((player) => {
+      if (player.id === currentPlayerId) return false;
+      if (!player.name.toLocaleLowerCase("da-DK").includes(search)) return false;
+      if (search) return true;
+      // With an empty search, keep accepted friends in the dedicated friend list.
+      return !relationships.some((relation) =>
+        relation.status === "accepted" &&
+        ((relation.requester_id === currentPlayerId && relation.recipient_id === player.id) ||
+         (relation.recipient_id === currentPlayerId && relation.requester_id === player.id)));
+    });
+  }, [players, query, currentPlayerId, relationships]);
   const incoming = relationships.filter((f) =>
-    f.recipient_id === currentPlayerId && f.status === "pending");
-  const accepted = relationships.filter((f) => f.status === "accepted");
+    f.recipient_id === currentPlayerId && f.status === "pending" &&
+    f.requester_id !== currentPlayerId);
   const selected = players.find((player) => player.id === selectedId) ?? null;
   const p = selected ? profileStats?.stats.player_stats.find((row) => row.player_id === selected.id) : null;
   const shot = selected ? profileStats?.stats.shot_counts.find((row) => row.player_id === selected.id) : null;
@@ -301,8 +320,41 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             })}
           </div>
         ) : null}
-        <p className={styles.muted}>Du har {accepted.length} {accepted.length === 1 ? "ven" : "venner"}.</p>
-        <label className={styles.searchLabel} htmlFor="player-search">S&#xF8;g efter spiller</label>
+        <div className={styles.friendsBlock}>
+          <div className={styles.friendsHeading}>
+            <h3>Mine venner</h3>
+            <span className={styles.friendCount}>{friends.length} {friends.length === 1 ? "ven" : "venner"}</span>
+          </div>
+          {friends.length === 0 ? (
+            <p className={styles.muted}>Du har endnu ingen venner. S&#xF8;g efter en spiller nedenfor for at sende en anmodning.</p>
+          ) : (
+            <div className={styles.friendList}>
+              {friends.map(({ player, relation }) => (
+                <div key={relation.id} className={styles.friendRow}>
+                  <span className={styles.avatar} aria-hidden="true">
+                    {player.name.slice(0, 1).toLocaleUpperCase("da-DK")}
+                  </span>
+                  <span className={styles.playerName}>
+                    <strong>{player.name}</strong>
+                    <small>Ven</small>
+                  </span>
+                  <div className={styles.actions}>
+                    <button type="button" aria-label={`Se statistik for ${player.name}`}
+                      onClick={() => setSelectedId(player.id)}>
+                      Se stats
+                    </button>
+                    <button type="button" className={styles.quietButton}
+                      disabled={!!busyActionId} aria-label={`Fjern ${player.name} som ven`}
+                      onClick={() => void action(player.id, "remove")}>
+                      Fjern ven
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <label className={styles.searchLabel} htmlFor="player-search">Find spillere</label>
         <input id="player-search" type="search" value={query}
           onChange={(e) => setQuery(e.target.value)} placeholder="Skriv et spillernavn..."
           className={styles.search} autoComplete="off" />
@@ -319,7 +371,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                 <div key={player.id} className={`${styles.result} ${selectedId === player.id ? styles.selected : ""}`}>
                   <span className={styles.avatar}>{player.name.slice(0, 1).toLocaleUpperCase("da-DK")}</span>
                   <span className={styles.playerName}>
-                    <strong>{player.name}{player.id === currentPlayerId ? " (dig)" : ""}</strong>
+                    <strong>{player.name}</strong>
                     <small>{relation?.status === "accepted" ? "Ven" : pendingIn ? "Afventer dit svar" : pendingOut ? "Anmodning sendt" : viewAllowed ? "Profil tilg\u00e6ngelig" : !player.auth_user_id ? "Ingen login-konto" : !player.active ? "Inaktiv profil" : "Ikke venner endnu"}</small>
                   </span>
                   <div className={styles.actions}>
