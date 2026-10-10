@@ -14,6 +14,7 @@ import { syncPendingRounds } from "@/lib/round-sync";
 import NewRoundView from "@/app/NewRoundView";
 import EditCoursesView from "@/app/EditCoursesView";
 import FindPlayersView from "@/app/FindPlayersView";
+import ProfileSetupView from "@/app/ProfileSetupView";
 import navStyles from "./StatsNavigation.module.css";
 import type {
   BestRound,
@@ -124,6 +125,7 @@ function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -135,13 +137,26 @@ function AuthScreen() {
 
     try {
       if (mode === "signup") {
-        if (!name.trim()) throw new Error("Indtast dit navn.");
+        const chosenName = name.trim();
+        if (chosenName.length < 2 || chosenName.length > 40) {
+          throw new Error("Brugernavnet skal v\u00e6re mellem 2 og 40 tegn.");
+        }
+
+        // Check availability before signup; the database unique index is definitive.
+        const { data: nameAvailable, error: nameError } = await supabase.rpc(
+          "disc_golf_name_available",
+          { p_name: chosenName },
+        );
+        if (nameError) throw nameError;
+        if (!nameAvailable) {
+          throw new Error("Brugernavnet er allerede optaget. V\u00e6lg et andet.");
+        }
 
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            data: { name: name.trim() },
+            data: { name: chosenName },
           },
         });
 
@@ -149,7 +164,7 @@ function AuthScreen() {
 
         if (!data.session) {
           setMessage(
-            "Bruger oprettet. Tjek din mail og bekr\u00e6ft kontoen, hvis email-bekr\u00e6ftelse er sl\u00e5et til i Supabase.",
+            "Tjek din e-mail og bekr\u00e6ft kontoen. Linket udl\u00f8ber efter 30 minutter.",
           );
         } else {
           setMessage("Bruger oprettet. Du er nu logget ind.");
@@ -165,6 +180,28 @@ function AuthScreen() {
       setError(err instanceof Error ? err.message : "Der opstod en ukendt fejl.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function resendConfirmation() {
+    if (!email.trim()) {
+      setError("Indtast din e-mail f\u00f8rst.");
+      return;
+    }
+    setResending(true);
+    setError("");
+    setMessage("");
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+      });
+      if (resendError) throw resendError;
+      setMessage("Hvis kontoen afventer bekr\u00e6ftelse, er en ny mail sendt.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke sende mailen.");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -257,6 +294,15 @@ function AuthScreen() {
             {busy ? "Arbejder\u2026" : mode === "login" ? "Log ind" : "Opret bruger"}
           </button>
         </form>
+        <button
+          type="button"
+          className="logout-button"
+          style={{ width: "auto", marginTop: 12, padding: 10 }}
+          disabled={busy || resending}
+          onClick={() => void resendConfirmation()}
+        >
+          {resending ? "Sender..." : "Send bekr\u00e6ftelsesmail igen"}
+        </button>
       </section>
     </main>
   );
@@ -420,6 +466,7 @@ export default function HomePage() {
   const [currentPlayer, setCurrentPlayer] = useState<{ id: string; name: string } | null>(null);
   const [currentPlayerLoading, setCurrentPlayerLoading] = useState(false);
   const [currentPlayerError, setCurrentPlayerError] = useState("");
+  const [profileCheckedUserId, setProfileCheckedUserId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [pendingRoundCount, setPendingRoundCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -525,10 +572,12 @@ export default function HomePage() {
       setCurrentPlayer(null);
       setCurrentPlayerError("");
       setCurrentPlayerLoading(false);
+      setProfileCheckedUserId(null);
       return;
     }
 
     const userId = session.user.id;
+    setProfileCheckedUserId(null);
     let cancelled = false;
 
     async function loadCurrentPlayer() {
@@ -547,15 +596,17 @@ export default function HomePage() {
         setCurrentPlayer(null);
         setCurrentPlayerError(playerError.message);
         setCurrentPlayerLoading(false);
+        setProfileCheckedUserId(userId);
         return;
       }
 
       if (!data) {
+        // First login after email confirmation: present profile setup instead
+        // of displaying a fatal missing-player error.
         setCurrentPlayer(null);
-        setCurrentPlayerError(
-          "Din login-bruger er ikke koblet til en spiller i public.players.",
-        );
+        setCurrentPlayerError("");
         setCurrentPlayerLoading(false);
+        setProfileCheckedUserId(userId);
         return;
       }
 
@@ -564,6 +615,7 @@ export default function HomePage() {
         name: data.name,
       });
       setCurrentPlayerLoading(false);
+      setProfileCheckedUserId(userId);
     }
 
     loadCurrentPlayer();
@@ -765,6 +817,40 @@ export default function HomePage() {
   if (!authReady) return <LoadingScreen />;
   if (!session) return <AuthScreen />;
 
+  if (currentPlayerLoading || profileCheckedUserId !== session.user.id) {
+    return <LoadingScreen />;
+  }
+
+  if (currentPlayerError) {
+    return (
+      <main className="auth-page">
+        <section className="auth-card">
+          <div className="form-message error">{currentPlayerError}</div>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => void supabase.auth.signOut({ scope: "local" })}
+          >
+            Log ud og pr\u00f8v igen
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  if (!currentPlayer) {
+    return (
+      <ProfileSetupView
+        initialName={String(session.user.user_metadata?.name ?? "")}
+        onCreated={(player) => {
+          setCurrentPlayer(player);
+          setCurrentPlayerError("");
+          setStatsRefreshKey((value) => value + 1);
+        }}
+      />
+    );
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut({ scope: "local" });
   }
@@ -951,35 +1037,28 @@ export default function HomePage() {
           </div>
         ) : null}
 
-<div
-  style={{
-    display: view === "newround" ? "block" : "none",
-  }}
->
-  <NewRoundView
-    currentUserId={session.user.id}
-    onQueued={() =>
-      setQueueRefreshKey((value) => value + 1)
-    }
-  />
-</div>
-        
-{view === "courses" ? (
-  <EditCoursesView
-    onSaved={() =>
-      setStatsRefreshKey((value) => value + 1)
-    }
-  />
-) : null}
-        
-        {view === "profiles" && currentPlayer ? (
-  <FindPlayersView
-    currentPlayerId={currentPlayer.id}
-    season={season}
-    courseId={courseId}
-    onRelationshipsChanged={() => setStatsRefreshKey((value) => value + 1)}
-  />
-) : null}
+        {/* Keep the editor mounted while switching tabs, so scores are preserved. */}
+        <div style={{ display: view === "newround" ? "block" : "none" }}>
+          <NewRoundView
+            currentUserId={session.user.id}
+            onQueued={() => setQueueRefreshKey((value) => value + 1)}
+          />
+        </div>
+
+        {view === "courses" ? (
+          <EditCoursesView
+            onSaved={() => setStatsRefreshKey((value) => value + 1)}
+          />
+        ) : null}
+
+        {view === "profiles" ? (
+          <FindPlayersView
+            currentPlayerId={currentPlayer.id}
+            season={season}
+            courseId={courseId}
+            onRelationshipsChanged={() => setStatsRefreshKey((value) => value + 1)}
+          />
+        ) : null}
 
         {view !== "newround" && view !== "courses" && loading && !stats ? <LoadingScreen /> : null}
 
