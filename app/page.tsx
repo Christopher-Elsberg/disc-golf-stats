@@ -160,7 +160,29 @@ function AuthScreen() {
           },
         });
 
-        if (signUpError) throw signUpError;
+        if (
+  signUpError?.code === "user_already_exists" ||
+  /already registered/i.test(signUpError?.message ?? "")
+) {
+  setError(
+    "Denne e-mail er allerede tilknyttet en konto. Log ind i stedet."
+  );
+  return;
+}
+
+if (signUpError) throw signUpError;
+
+
+if (
+  data.user &&
+  Array.isArray(data.user.identities) &&
+  data.user.identities.length === 0
+) {
+  setError(
+    "Denne e-mail er allerede tilknyttet en konto. Log ind i stedet."
+  );
+  return;
+}
 
         if (!data.session) {
           setMessage(
