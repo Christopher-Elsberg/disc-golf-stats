@@ -341,8 +341,20 @@ function AuthScreen() {
         {mode === "login" ? (
           <button
             type="button"
-            className="logout-button"
-            style={{ width: "100%", marginTop: 12, padding: 10 }}
+            style={{
+              display: "block",
+              width: "100%",
+              minHeight: 44,
+              height: "auto",
+              marginTop: 12,
+              padding: "11px 14px",
+              border: "1px solid var(--line-strong)",
+              borderRadius: 12,
+              background: "var(--mint)",
+              color: "var(--forest)",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
             disabled={busy}
             onClick={() => {
               setMode("reset");
@@ -357,8 +369,20 @@ function AuthScreen() {
         {mode === "reset" ? (
           <button
             type="button"
-            className="logout-button"
-            style={{ width: "100%", marginTop: 12, padding: 10 }}
+            style={{
+              display: "block",
+              width: "100%",
+              minHeight: 44,
+              height: "auto",
+              marginTop: 12,
+              padding: "11px 14px",
+              border: "1px solid var(--line-strong)",
+              borderRadius: 12,
+              background: "var(--mint)",
+              color: "var(--forest)",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
             disabled={busy}
             onClick={() => {
               setMode("login");
@@ -372,8 +396,20 @@ function AuthScreen() {
         {mode === "signup" ? (
           <button
             type="button"
-            className="logout-button"
-            style={{ width: "100%", marginTop: 12, padding: 10 }}
+            style={{
+              display: "block",
+              width: "100%",
+              minHeight: 44,
+              height: "auto",
+              marginTop: 12,
+              padding: "11px 14px",
+              border: "1px solid var(--line-strong)",
+              borderRadius: 12,
+              background: "var(--mint)",
+              color: "var(--forest)",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
             disabled={busy || resending}
             onClick={() => void resendConfirmation()}
           >
