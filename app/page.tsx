@@ -34,7 +34,7 @@ type StatsTab =
   | "rating";
 
 type View = "newround" | "courses" | "profiles" | "myoverview" | StatsTab;
-type AuthMode = "login" | "signup";
+type AuthMode = "login" | "signup" | "reset";
 
 const MAIN_MENU: Array<{ id: View; label: string; icon: string }> = [
   { id: "newround", label: "Ny runde", icon: "+" },
@@ -129,6 +129,16 @@ function AuthScreen() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    // The dedicated reset page signs out and redirects back here on success.
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("password_reset") === "success") {
+      setMessage("Din adgangskode er blevet \u00e6ndret. Du kan nu logge ind.");
+      url.searchParams.delete("password_reset");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, []);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -136,7 +146,16 @@ function AuthScreen() {
     setMessage("");
 
     try {
-      if (mode === "signup") {
+      if (mode === "reset") {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          email.trim(),
+          { redirectTo: `${window.location.origin}/reset-password` },
+        );
+        if (resetError) throw resetError;
+        setMessage(
+          "Hvis e-mailadressen er registreret, modtager du et link til at nulstille adgangskoden. Kontroll\u00e9r ogs\u00e5 spam-mappen.",
+        );
+      } else if (mode === "signup") {
         const chosenName = name.trim();
         if (chosenName.length < 2 || chosenName.length > 40) {
           throw new Error("Brugernavnet skal v\u00e6re mellem 2 og 40 tegn.");
@@ -161,28 +180,19 @@ function AuthScreen() {
         });
 
         if (
-  signUpError?.code === "user_already_exists" ||
-  /already registered/i.test(signUpError?.message ?? "")
-) {
-  setError(
-    "Denne e-mail er allerede tilknyttet en konto. Log ind i stedet."
-  );
-  return;
-}
-
-if (signUpError) throw signUpError;
-
-
-if (
-  data.user &&
-  Array.isArray(data.user.identities) &&
-  data.user.identities.length === 0
-) {
-  setError(
-    "Denne e-mail er allerede tilknyttet en konto. Log ind i stedet."
-  );
-  return;
-}
+          signUpError?.code === "user_already_exists" ||
+          /already registered/i.test(signUpError?.message ?? "")
+        ) {
+          throw new Error("Denne e-mail er allerede tilknyttet en konto. Log ind i stedet.");
+        }
+        if (signUpError) throw signUpError;
+        if (
+          data.user &&
+          Array.isArray(data.user.identities) &&
+          data.user.identities.length === 0
+        ) {
+          throw new Error("Denne e-mail er allerede tilknyttet en konto. Log ind i stedet.");
+        }
 
         if (!data.session) {
           setMessage(
@@ -246,6 +256,14 @@ if (
           </p>
         </div>
 
+        {mode === "reset" ? (
+          <div className="auth-copy" style={{ marginTop: 12 }}>
+            <h2>Nulstil adgangskode</h2>
+            <p>Indtast den e-mailadresse, du bruger til Disc Golf Stats. Vi sender et sikkert link til at v&#xE6;lge en ny adgangskode.</p>
+          </div>
+        ) : null}
+
+        {mode !== "reset" ? (
         <div className="auth-toggle" role="tablist" aria-label="Login eller opret bruger">
           <button
             type="button"
@@ -270,6 +288,7 @@ if (
             Opret bruger
           </button>
         </div>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="auth-form">
           {mode === "signup" ? (
@@ -297,6 +316,7 @@ if (
             />
           </label>
 
+          {mode !== "reset" ? (
           <label>
             Adgangskode
             <input
@@ -308,23 +328,58 @@ if (
               required
             />
           </label>
+          ) : null}
 
           {error ? <div className="form-message error">{error}</div> : null}
           {message ? <div className="form-message success">{message}</div> : null}
 
           <button className="primary-button auth-submit" type="submit" disabled={busy}>
-            {busy ? "Arbejder\u2026" : mode === "login" ? "Log ind" : "Opret bruger"}
+            {busy ? "Arbejder\u2026" : mode === "login" ? "Log ind" : mode === "signup" ? "Opret bruger" : "Send nulstillingslink"}
           </button>
         </form>
-        <button
-          type="button"
-          className="logout-button"
-          style={{ width: "auto", marginTop: 12, padding: 10 }}
-          disabled={busy || resending}
-          onClick={() => void resendConfirmation()}
-        >
-          {resending ? "Sender..." : "Send bekr\u00e6ftelsesmail igen"}
-        </button>
+
+        {mode === "login" ? (
+          <button
+            type="button"
+            className="logout-button"
+            style={{ width: "100%", marginTop: 12, padding: 10 }}
+            disabled={busy}
+            onClick={() => {
+              setMode("reset");
+              setError("");
+              setMessage("");
+              setPassword("");
+            }}
+          >
+            Glemt adgangskode?
+          </button>
+        ) : null}
+        {mode === "reset" ? (
+          <button
+            type="button"
+            className="logout-button"
+            style={{ width: "100%", marginTop: 12, padding: 10 }}
+            disabled={busy}
+            onClick={() => {
+              setMode("login");
+              setError("");
+              setMessage("");
+            }}
+          >
+            Tilbage til login
+          </button>
+        ) : null}
+        {mode === "signup" ? (
+          <button
+            type="button"
+            className="logout-button"
+            style={{ width: "100%", marginTop: 12, padding: 10 }}
+            disabled={busy || resending}
+            onClick={() => void resendConfirmation()}
+          >
+            {resending ? "Sender..." : "Send bekr\u00e6ftelsesmail igen"}
+          </button>
+        ) : null}
       </section>
     </main>
   );
