@@ -811,6 +811,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
             {isNewCourse ? "Tilf\u00f8j f\u00f8rste hul til den nye bane ovenfor." : "Den valgte bane har ingen registrerede huller."}
           </div>
         ) : (
+          <>
           <div className="table-scroll score-entry-scroll">
             <table className="stats-table score-entry-table">
               <thead>
@@ -930,6 +931,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
               </div>
             </section>
           </div>
+          </>
         )}
 
         <div className="round-save-bar">
