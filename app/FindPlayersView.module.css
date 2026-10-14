@@ -116,3 +116,25 @@
 @media(max-width:650px) {
   .profileNavButton { min-height: 44px; padding: 9px 12px; }
 }
+
+
+/* Highest-rated round is the headline metric in public player profiles. */
+.bestRoundDetail {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid rgba(19,163,123,.18);
+  border-radius: 14px;
+  background: rgba(19,163,123,.06);
+  min-width: 0;
+}
+.bestRoundDetail strong {
+  color: var(--forest);
+  font-size: clamp(1.4rem,4vw,2rem);
+  line-height: 1.2;
+}
+.bestRoundDetail span {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: .86rem;
+}
