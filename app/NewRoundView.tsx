@@ -923,7 +923,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
                   return (
                     <div className="mobile-total-player" key={player.id}>
                       <span>{player.name}</span>
-                      <strong>{complete ? total : "–"}</strong>
+                      <strong>{complete ? total : "\u2013"}</strong>
                       <small>{complete ? toParLabel(total - coursePar) : "Mangler slag"}</small>
                     </div>
                   );
