@@ -59,7 +59,7 @@ function ProfileScorecard({ scorecard }: { scorecard: Scorecard }) {
         <span>{date(scorecard.date)} | {player.total_strokes} ({vsPar(player.score_to_par)})</span>
       </summary>
       <div className={styles.tableScroll}>
-        <table className={styles.table}>
+        <table className={`${styles.table} ${styles.mobileCards}`}>
           <thead><tr><th>Hul</th><th>Par</th><th>Slag</th><th>Vs. par</th></tr></thead>
           <tbody>
             {scorecard.holes.map((hole) => {
@@ -439,7 +439,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             </div>
 
             <Box id="profile-recent" title="Seneste runder">
-              {recent.length ? <div className={styles.tableScroll}><table className={styles.table}>
+              {recent.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Vs. par</th><th>Rating</th></tr></thead>
                 <tbody>{recent.map((r) => <tr key={r.round_id}>
                   <th>#{r.round_number}</th><td>{date(r.date)}</td><td>{r.course_name}</td>
@@ -449,7 +449,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             </Box>
 
             <Box id="profile-allrounds" title="Alle runder">
-              {history.length ? <div className={styles.tableScroll}><table className={styles.table}>
+              {history.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Par</th><th>Vs. par</th><th>Rating</th></tr></thead>
                 <tbody>{[...history].sort((a, b) => b.round_number - a.round_number).map((r) => <tr key={r.round_id}>
                   <th>#{r.round_number}</th><td>{date(r.date)}</td><td>{r.course_name}</td>
@@ -465,7 +465,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             </Box>
 
             <Box id="profile-shots" title="Slagtyper">
-              {shot ? <div className={styles.tableScroll}><table className={styles.table}>
+              {shot ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Huller</th><th>Streger</th><th>Birdies</th><th>Bogeys</th><th>Double+</th></tr></thead>
                 <tbody><tr><td>{shot.holes_played}</td>
                   {[shot.strokes_over_10, shot.birdie, shot.bogey, shot.double_plus].map((item, index) =>
@@ -475,7 +475,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             </Box>
 
             <Box id="profile-headtohead" title="Head-to-head">
-              {headToHead.length ? <div className={styles.tableScroll}><table className={styles.table}>
+              {headToHead.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Modstander</th><th>Kampe</th><th>Sejre</th><th>Nederlag</th><th>Uafgjort</th><th>Winrate</th></tr></thead>
                 <tbody>{headToHead.map((r) => {
                   const first = r.player_1_id === selected.id;
@@ -490,7 +490,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             </Box>
 
             <Box id="profile-frontback" title="Front / Back">
-              {frontBack.length ? <div className={styles.tableScroll}><table className={styles.table}>
+              {frontBack.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Bane</th><th>Runder</th><th>Front</th><th>Back</th></tr></thead>
                 <tbody>{frontBack.map((r) => <tr key={r.course_name}>
                   <th>{r.course_name}</th><td>{r.rounds}</td>
@@ -500,7 +500,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             </Box>
 
             <Box id="profile-bestworst" title="Bedste og v&#xE6;rste huller">
-              {bestWorst.length ? <div className={styles.tableScroll}><table className={styles.table}>
+              {bestWorst.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Bane</th><th>Bedste hul</th><th>Gns. vs. par</th><th>V&#xE6;rste hul</th><th>Gns. vs. par</th></tr></thead>
                 <tbody>{bestWorst.map((r) => <tr key={r.course_id}>
                   <th>{r.course_name}</th><td>{r.best_hole?.hole_label ?? "-"}</td>
@@ -513,7 +513,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             <div id="profile-hole-averages" className={styles.holeSections}>
               {holeStats.length === 0 ? <Box title="Hulstatistik"><p className={styles.muted}>Ingen hulstatistik.</p></Box> : null}
               {holeStats.map((course) => <Box key={course.course_id} title={`Hulstatistik | ${course.course_name}`}>
-              <div className={styles.tableScroll}><table className={styles.table}>
+              <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Hul</th><th>Par</th><th>Gns. slag</th><th>Gns. vs. par</th><th>Bedste score</th></tr></thead>
                 <tbody>{course.holes.map((hole) => <tr key={hole.hole_id}>
                   <th>{hole.hole_label}</th><td>{hole.par}</td>
