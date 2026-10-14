@@ -272,7 +272,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
         .map((round) => ({ ...round, players: round.players.filter((v) => v.player_id === selected.id) }))
     : [];
   const headToHead = selected ? profileStats?.stats.head_to_head.filter((row) =>
-    row.player_1_id === selected.id || row.player_2_id === selected.id) ?? [] : [];
+    row.games > 0 && (row.player_1_id === selected.id || row.player_2_id === selected.id)) ?? [] : [];
   const frontBack = selected ? profileStats?.stats.front_back.flatMap((course) => {
     const row = course.players.find((player) => player.player_id === selected.id);
     return row && row.rounds > 0 ? [{ ...row, course_name: course.course_name, front_label: course.front_label, back_label: course.back_label }] : [];
