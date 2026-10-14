@@ -401,9 +401,23 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
     };
   }, [draftReady, courseId, isNewCourse, draftLayoutVersion, selectedCourse?.current_layout_version]);
 
+  const allowedPlayers = useMemo(
+    () => players.filter((player) =>
+      player.auth_user_id === currentUserId || friendIds.includes(player.id)
+    ),
+    [players, currentUserId, friendIds],
+  );
+
+  const blockedSelectedPlayers = useMemo(
+    () => selectedPlayers
+      .filter((id) => !allowedPlayers.some((player) => player.id === id))
+      .map((id) => players.find((player) => player.id === id)?.name ?? "Ukendt spiller"),
+    [selectedPlayers, allowedPlayers, players],
+  );
+
   const selectedPlayerRows = useMemo(
-    () => players.filter((player) => selectedPlayers.includes(player.id)),
-    [players, selectedPlayers],
+    () => allowedPlayers.filter((player) => selectedPlayers.includes(player.id)),
+    [allowedPlayers, selectedPlayers],
   );
 
   const coursePar = useMemo(
@@ -448,6 +462,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
   }
 
   function togglePlayer(playerId: string) {
+    if (!allowedPlayers.some((player) => player.id === playerId)) return;
     setDraftActive(true);
     setSuccess("");
     setError("");
@@ -532,6 +547,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
 
   function validateRound() {
     if (!courseId) return "V\u00e6lg en bane.";
+    if (blockedSelectedPlayers.length > 0) return "Kladden indeholder en spiller, som ikke er accepteret ven. Fjern spilleren eller bliv venner igen.";
     if (!playedOn) return "V\u00e6lg en dato.";
     if (selectedPlayerRows.length === 0) return "V\u00e6lg mindst \u00e9n spiller.";
 
@@ -835,11 +851,11 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
               <span>Spillere</span>
               <strong>{selectedPlayerRows.length} valgt</strong>
             </div>
-            <small>Klik p&#xE5; en spiller for at til- eller frav&#xE6;lge.</small>
+            <small>Du kan kun v&#xE6;lge dig selv og accepterede venner.</small>
           </div>
 
           <div className="player-picker">
-            {players.map((player) => {
+            {allowedPlayers.map((player) => {
               const selected = selectedPlayers.includes(player.id);
               const isMe = player.auth_user_id === currentUserId;
               return (
@@ -857,6 +873,25 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
               );
             })}
           </div>
+          {allowedPlayers.length <= 1 ? (
+            <div className="round-friends-notice">
+              Du har endnu ingen accepterede venner at spille med. Du kan stadig gemme en solo-runde.
+              <button type="button" onClick={onOpenFriends}>Find venner</button>
+            </div>
+          ) : null}
+          {friendsNotice ? <p className="round-friends-help" role="status">{friendsNotice}</p> : null}
+          {blockedSelectedPlayers.length > 0 ? (
+            <div className="error-banner round-blocked-friends">
+              <strong>Kladden indeholder ikke-venner</strong>
+              <span>{blockedSelectedPlayers.join(", ")}. Dine scores er bevaret. Fjern dem fra runden eller bliv venner igen.</span>
+              <button type="button" onClick={() => {
+                setDraftActive(true);
+                const ids = new Set(allowedPlayers.map((p) => p.id));
+                setSelectedPlayers((current) => current.filter((id) => ids.has(id)));
+              }}>Fjern ikke-venner fra runden</button>
+              <button type="button" onClick={onOpenFriends}>Administrer venner</button>
+            </div>
+          ) : null}
         </div>
       </section>
 
