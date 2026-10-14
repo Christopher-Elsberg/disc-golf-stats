@@ -568,6 +568,7 @@ export default function HomePage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [view, setView] = useState<View>("myoverview");
+  const [roundEditorLoadedFor, setRoundEditorLoadedFor] = useState<string | null>(null);
   const [statsMenuOpen, setStatsMenuOpen] = useState(true);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [season, setSeason] = useState<string>("all");
@@ -602,6 +603,10 @@ export default function HomePage() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (session && view === "newround") setRoundEditorLoadedFor(session.user.id);
+  }, [session?.user.id, view]);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -1151,15 +1156,18 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {/* Keep the editor mounted while switching tabs, so scores are preserved. */}
-        <div style={{ display: view === "newround" ? "block" : "none" }}>
-          <NewRoundView
-            currentUserId={session.user.id}
-            active={view === "newround"}
-            onQueued={() => setQueueRefreshKey((value) => value + 1)}
-            onOpenFriends={() => { setView("profiles"); setMobileMenuOpen(false); }}
-          />
-        </div>
+        {/* Load the editor only on first visit; then preserve the draft across tabs. */}
+        {(view === "newround" || roundEditorLoadedFor === session.user.id) ? (
+          <div style={{ display: view === "newround" ? "block" : "none" }}>
+            <NewRoundView
+              key={session.user.id}
+              currentUserId={session.user.id}
+              active={view === "newround"}
+              onQueued={() => setQueueRefreshKey((value) => value + 1)}
+              onOpenFriends={() => { setView("profiles"); setMobileMenuOpen(false); }}
+            />
+          </div>
+        ) : null}
 
         {view === "courses" ? (
           <EditCoursesView
