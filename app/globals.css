@@ -1544,3 +1544,50 @@ select:focus-visible {
   .stats-table th, .stats-table td { padding: 5px 6px; }
   .sidebar { width: 86vw; }
 }
+
+
+/* Responsive mobile experience: phone/tablet auto-layout by viewport. */
+.mobile-score-entry { display: none; }
+@media (max-width: 700px) {
+  .app-shell,.main-content,.content-stack,.panel,.new-round-stack,.score-entry-panel { min-width: 0; }
+  .panel-heading,.topbar-title,.round-field { min-width: 0; }
+  .panel-heading h2,.panel-heading p,.course-summary strong { overflow-wrap: anywhere; }
+  .score-entry-scroll { display: none; }
+  .mobile-score-entry { display: grid; gap: 10px; padding: 10px; }
+  .mobile-hole-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #fff; min-width: 0; }
+  .mobile-hole-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--mint); color: var(--forest); }
+  .mobile-hole-heading strong { font-size: 1rem; overflow-wrap: anywhere; }
+  .mobile-hole-heading span { background: #fff; padding: 5px 9px; border-radius: 999px; flex-shrink: 0; font-size: .76rem; font-weight: 800; }
+  .mobile-hole-players,.mobile-total-list { display: grid; padding: 2px 11px; }
+  .mobile-score-player { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .mobile-score-player:last-child,.mobile-total-player:last-child { border-bottom: 0; }
+  .mobile-score-player-name { font-size: .9rem; font-weight: 750; min-width: 0; overflow-wrap: anywhere; }
+  .mobile-score-entry .score-input-wrap { width: 88px; margin: 0; }
+  .mobile-score-entry .score-input { width: 88px; min-height: 46px; font-size: 18px; padding: 7px 26px 7px 9px; }
+  .mobile-score-entry .hole-diff { width: 22px; right: 3px; font-size: .7rem; }
+  .mobile-total-card { border-color: #95bd9e; }
+  .mobile-total-player { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .mobile-total-player > span { font-size: .85rem; font-weight: 750; overflow-wrap: anywhere; }
+  .mobile-total-player > strong { font-size: 1.1rem; }
+  .mobile-total-player > small { color: var(--forest-3); text-align: right; font-size: .74rem; }
+  .table-scroll:has(> .mobile-stat-cards) { overflow: visible; }
+  .mobile-stat-cards,.mobile-stat-cards tbody { display: block; width: 100%; min-width: 0; }
+  .mobile-stat-cards thead { display: none; }
+  .mobile-stat-cards tbody tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+  .mobile-stat-cards tbody tr:last-child { margin-bottom: 0; }
+  .mobile-stat-cards tbody th { position: static!important; grid-column: 1/-1; display: block; padding: 0 0 8px; background: transparent!important; border-bottom: 1px solid var(--line); text-align: left; white-space: normal; overflow-wrap: anywhere; color: var(--forest); font-size: .94rem; }
+  .mobile-stat-cards tbody td { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; padding: 6px 3px; min-width: 0; border: 0; background: transparent!important; text-align: left; white-space: normal; overflow-wrap: anywhere; font-weight: 800; font-size: .9rem; }
+  .mobile-stat-cards tbody td::before { content: attr(data-label); font-size: .69rem; color: var(--muted); font-weight: 700; }
+  .mobile-stat-cards .to-par-inline { margin-left: 0; }
+  .chart-scroll { overflow: hidden; }
+  .rating-chart { width: 100%; min-width: 0; max-width: 100%; height: auto; }
+  .round-save-bar { padding-bottom: max(12px,env(safe-area-inset-bottom)); }
+  .player-chip { min-height: 44px; }
+  .round-field input,.round-field select,.add-hole-button,.save-round-button { min-height: 44px; }
+  .scorecard-grid,.chart-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 380px) {
+  .mobile-stat-cards tbody tr { gap: 5px; padding: 8px; }
+  .mobile-score-entry { padding: 7px; }
+  .mobile-score-entry .score-input-wrap,.mobile-score-entry .score-input { width: 76px; }
+}
