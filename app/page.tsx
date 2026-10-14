@@ -1155,7 +1155,9 @@ export default function HomePage() {
         <div style={{ display: view === "newround" ? "block" : "none" }}>
           <NewRoundView
             currentUserId={session.user.id}
+            active={view === "newround"}
             onQueued={() => setQueueRefreshKey((value) => value + 1)}
+            onOpenFriends={() => { setView("profiles"); setMobileMenuOpen(false); }}
           />
         </div>
 
