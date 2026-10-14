@@ -4,7 +4,7 @@ import { courseLayoutKey } from "./shared.ts";
 import { fetchAll, fetchByRoundIds as fetchRowsByIds } from "./repository.ts";
 import { buildStatisticsResponse } from "./statistics.ts";
 
-export default {export default {
+export default {
   fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
     if (req.method !== "POST") {
       return Response.json({ error: "Use POST" }, { status: 405 });
