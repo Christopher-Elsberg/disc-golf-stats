@@ -839,6 +839,7 @@ export default function HomePage() {
 
         return [];
       })
+      .filter((opponent) => opponent.games > 0)
       .sort((a, b) => b.games - a.games || a.opponent_name.localeCompare(b.opponent_name));
 
     const frontBack = stats.stats.front_back
