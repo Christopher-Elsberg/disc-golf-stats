@@ -1,7 +1,7 @@
 import { withSupabase } from "npm:@supabase/server";
 import type { PlayerRow, CourseRow, HoleRow, RoundRow, RoundPlayerRow, HoleScoreRow } from "./models.ts";
 import { courseLayoutKey } from "./shared.ts";
-import { fetchAll, fetchByRoundIds as fetchRowsByIds } from "./repository.ts";
+import { PAGE_SIZE, fetchAll, fetchByRoundIds as fetchRowsByIds } from "./repository.ts";
 import { buildStatisticsResponse } from "./statistics.ts";
 
 export default {
@@ -18,7 +18,7 @@ export default {
       fetchRowsByIds(supabase, table, columns, ids, column);
 
     try {
-      let body: { season?: number | string | null; course_id?: string | null; player_id?: string | null } = {};
+      let body: { season?: number | string | null; course_id?: string | null; player_id?: string | null; section?: string | null } = {};
       try {
         body = await req.json();
       } catch {
@@ -46,10 +46,18 @@ export default {
         return Response.json({ error: "You must be friends to view this player's statistics" }, { status: 403 });
       }
 
+      // Only known sections can be requested. The legacy default returns all tabs.
+      const allowedSections = new Set([
+        "all", "overview", "scorecards", "headtohead", "shots",
+        "frontback", "best", "holes", "bestworst", "rating", "recent", "allrounds",
+      ]);
+      const requestedSection = typeof body.section === "string" && allowedSections.has(body.section)
+        ? body.section : "all";
+
       // Opponent breakdowns must not leak statistics for unrelated players.
       // Admins can see all; regular users only themselves and accepted friends.
       const visibleOpponentIds = new Set<string>([caller.id, targetPlayerId]);
-      if (caller.role !== "admin") {
+      if (caller.role !== "admin" && (requestedSection === "headtohead" || requestedSection === "all")) {
         const { data: friendships, error: friendsError } = await ctx.supabase
           .from("friendships")
           .select("requester_id,recipient_id")
@@ -198,7 +206,7 @@ export default {
       return buildStatisticsResponse({
         players, selectedRounds, roundPlayers, holeScores,
         courseById, holesByCourseLayout, availableSeasons, availableCourses,
-        requestedSeason, requestedCourseId, targetPlayerId, caller,
+        requestedSeason, requestedCourseId, requestedSection, targetPlayerId, caller,
         visibleOpponentIds, playerRoundNumberById,
       });
     } catch (error) {
