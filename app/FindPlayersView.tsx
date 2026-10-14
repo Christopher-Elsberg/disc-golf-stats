@@ -445,9 +445,17 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                 ["Rating", num(p.rating, 0)], ["Handicap", num(p.handicap)],
                 ["Runder", String(p.rounds_played)], ["Sejre", String(p.round_wins)],
                 ["Gns. slag", num(p.average_strokes)], ["Gns. vs. par", vsPar(p.average_score_to_par)],
-                ["Stabilitet", num(p.consistency_sd_to_par)],
+                ["Stabilitet (rating)", num(p.consistency_sd_rating)],
               ].map(([label, value]) => <div key={label} className={styles.kpi}><span>{label}</span><strong>{value}</strong></div>)}
             </div>
+            {profileTab === "profile-overview" ? (
+              <p className={styles.muted}>
+                Stabilitet er standardafvigelsen af runderatings i det valgte filter.
+                {" "}{p.consistency_rated_rounds_used < 2
+                  ? "Kr\u00e6ver mindst to ratede runder."
+                  : `Beregnet p\u00e5 ${p.consistency_rated_rounds_used} ratede runder. Lavere tal betyder mere stabilt spil.`}
+              </p>
+            ) : null}
 
             <Box id="profile-recent" hidden={profileTab !== "profile-recent"} title="Seneste runder">
               {recent.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
