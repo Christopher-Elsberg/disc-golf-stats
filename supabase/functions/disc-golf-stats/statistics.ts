@@ -13,6 +13,7 @@ export type StatisticsContext = {
   availableCourses: Array<Record<string, unknown>>;
   requestedSeason: number | null;
   requestedCourseId: string | null;
+  requestedSection: string;
   targetPlayerId: string;
   caller: { id: string; role: string };
   visibleOpponentIds: Set<string>;
@@ -23,9 +24,11 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
   const {
     players, selectedRounds, roundPlayers, holeScores,
     courseById, holesByCourseLayout, availableSeasons, availableCourses,
-    requestedSeason, requestedCourseId, targetPlayerId, caller,
+    requestedSeason, requestedCourseId, requestedSection, targetPlayerId, caller,
     visibleOpponentIds, playerRoundNumberById,
   } = context;
+  const needs = (section: string) => requestedSection === "all" || requestedSection === section;
+  const needsHistory = needs("rating") || needs("recent") || needs("allrounds");
 
       // Apply personal numbering only when serializing that player's stats.
       // global_round_number is retained in the response for troubleshooting.
@@ -158,7 +161,9 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
         .filter((p) => p.id === targetPlayerId || relevantPlayerIds.has(p.id))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      const playerStats = relevantPlayers.map((player) => {
+      const targetPlayers = relevantPlayers.filter((p) => p.id === targetPlayerId);
+
+      const playerStats = targetPlayers.map((player) => {
         const playerResults = completeResults
           .filter((r) => r.player_id === player.id)
           .sort(newestFirst);
@@ -214,10 +219,12 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
       });
 
       const headToHead: any[] = [];
+      if (needs("headtohead")) {
       for (let i = 0; i < relevantPlayers.length; i++) {
         for (let j = i + 1; j < relevantPlayers.length; j++) {
           const p1 = relevantPlayers[i];
           const p2 = relevantPlayers[j];
+          if (p1.id !== targetPlayerId && p2.id !== targetPlayerId) continue;
           let games = 0;
           let p1Wins = 0;
           let p2Wins = 0;
@@ -251,8 +258,9 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
           });
         }
       }
+      }
 
-      const shotCounts = relevantPlayers.map((player) => {
+      const shotCounts = needs("shots") ? targetPlayers.map((player) => {
         const playerResults = completeResults.filter((r) => r.player_id === player.id);
         const allHoles = playerResults.flatMap((r) => r.holes);
         const total = allHoles.length;
@@ -273,14 +281,14 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
           bogey: { count: bogeys, rate: rate(bogeys) },
           double_plus: { count: doublePlus, rate: rate(doublePlus) },
         };
-      });
+      }) : [];
 
       const scopeCourseIds = [...new Set(selectedRounds.map((r) => r.course_id))];
 
-      const frontBack = scopeCourseIds.map((courseId) => {
+      const frontBack = needs("frontback") ? scopeCourseIds.map((courseId) => {
         const course = courseById.get(courseId)!;
 
-        const rows = relevantPlayers.map((player) => {
+        const rows = targetPlayers.map((player) => {
           const playerResults = completeResults.filter(
             (r) => r.player_id === player.id && r.course_id === courseId,
           );
@@ -328,9 +336,9 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
           back_label: `Back ${Math.max(0, currentHoles.length - splitAt)}`,
           players: rows,
         };
-      });
+      }) : [];
 
-      const holeStats = scopeCourseIds.map((courseId) => {
+      const holeStats = (needs("holes") || needs("bestworst")) ? scopeCourseIds.map((courseId) => {
         const course = courseById.get(courseId)!;
         const currentHoles =
           holesByCourseLayout.get(
@@ -345,7 +353,7 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
             hole_label: hole.hole_label,
             display_order: hole.display_order,
             par: Number(hole.par),
-            players: relevantPlayers.map((player) => {
+            players: targetPlayers.map((player) => {
               const courseResults = completeResults
                 .filter((r) => r.course_id === courseId && r.player_id === player.id)
                 .sort(newestFirst);
@@ -374,9 +382,10 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
             }),
           })),
         };
-      });
+      }) : [];
 
       const bestWorstHoles: any[] = [];
+      if (needs("bestworst")) {
       for (const courseStats of holeStats) {
         for (const player of relevantPlayers) {
           const candidates = courseStats.holes
@@ -412,8 +421,9 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
           });
         }
       }
+      }
 
-      const bestRounds = relevantPlayers.map((player) => {
+      const bestRounds = needs("best") ? targetPlayers.map((player) => {
         // Highest course-adjusted rating wins, regardless of raw stroke count.
         // Unrated rounds cannot be a player's best rated round.
         const candidates = completeResults
@@ -436,7 +446,7 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
           player_name: player.name,
           best_round: best,
         };
-      });
+      }) : [];
 
       const toScorecard = (round: RoundRow) => {
           const course = courseById.get(round.course_id)!;
@@ -476,14 +486,10 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
           };
       };
 
-      const lastFiveRounds = [...selectedRounds]
-        .sort((a, b) => Number(b.round_number) - Number(a.round_number))
-        .slice(0, 5)
-        .map(toScorecard);
-
       // Personal scorecards must NOT be derived from the five latest GLOBAL rounds.
       const playerLastFiveScorecards: Record<string, ReturnType<typeof toScorecard>[]> = {};
-      for (const player of relevantPlayers) {
+      if (needs("scorecards")) {
+      for (const player of targetPlayers) {
         playerLastFiveScorecards[player.id] = completeResults
           .filter((result) => result.player_id === player.id)
           .sort(newestFirst)
@@ -497,8 +503,9 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
             players: card.players.filter((item) => item.player_id === player.id),
           }));
       }
+      }
 
-      const ratingHistory = relevantPlayers.map((player) => ({
+      const ratingHistory = needsHistory ? targetPlayers.map((player) => ({
         player_id: player.id,
         player_name: player.name,
         history: completeResults
@@ -517,7 +524,7 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
             score_to_par: r.score_to_par,
             rating: roundTo(r.rating),
           })),
-      }));
+      })) : [];
 
       // SECURITY BOUNDARY: return only the authorized profile's data.
       // Never serialize the all-player objects used for calculating aggregates.
