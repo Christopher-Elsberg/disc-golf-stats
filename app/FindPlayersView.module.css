@@ -85,3 +85,34 @@
   .plot { width:100%; min-width:0; height:auto; }
   .actions button,.close,.refreshButton { min-height:44px; }
 }
+
+
+/* Profile statistic selectors: show one panel at a time, with Overview as default. */
+.profile [hidden] { display: none !important; }
+.profileNavButton {
+  appearance: none;
+  border: 1px solid rgba(90,135,124,.28);
+  border-radius: 999px;
+  background: rgba(19,163,123,.07);
+  color: inherit;
+  font: inherit;
+  font-size: .79rem;
+  font-weight: 700;
+  padding: 9px 12px;
+  min-height: 42px;
+  line-height: 1.25;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.profileNavButton:hover,.profileNavButton:focus-visible {
+  border-color: #13a37b;
+  background: rgba(19,163,123,.16);
+}
+.profileNavButton[aria-pressed="true"] {
+  border-color: #104e46;
+  background: #104e46;
+  color: #fff;
+}
+@media(max-width:650px) {
+  .profileNavButton { min-height: 44px; padding: 9px 12px; }
+}
