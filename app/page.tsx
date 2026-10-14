@@ -520,7 +520,7 @@ function ScorecardTable({ scorecard }: { scorecard: Scorecard }) {
       </div>
 
       <div className="table-scroll">
-        <table className="stats-table compact-table scorecard-table">
+        <table className="stats-table compact-table scorecard-table mobile-stat-cards">
           <thead>
             <tr>
               <th>Hul</th>
@@ -1279,7 +1279,7 @@ export default function HomePage() {
                   <EmptyState>Ingen head-to-head-data i det valgte filter.</EmptyState>
                 ) : (
                   <div className="table-scroll">
-                    <table className="stats-table">
+                    <table className="stats-table mobile-stat-cards">
                       <thead><tr>
                         <th>Modstander</th><th>Kampe</th><th>Sejre</th>
                         <th>Nederlag</th><th>Uafgjort</th><th>Winrate</th>
@@ -1303,7 +1303,7 @@ export default function HomePage() {
                 subtitle="Andel af alle spillede huller i det valgte filter."
               >
                 <div className="table-scroll">
-                  <table className="stats-table">
+                  <table className="stats-table mobile-stat-cards">
                     <thead>
                       <tr>
                         <th>Spiller</th>
@@ -1357,7 +1357,7 @@ export default function HomePage() {
                       subtitle={"Gennemsnitlig score mod par p\u00e5 banens f\u00f8rste og sidste halvdel."}
                     >
                       <div className="table-scroll">
-                        <table className="stats-table">
+                        <table className="stats-table mobile-stat-cards">
                           <thead>
                             <tr>
                               <th>Spiller</th>
@@ -1432,7 +1432,7 @@ export default function HomePage() {
                       subtitle={"Hver celle viser gennemsnit af spillerens sidste 5 runder p\u00e5 banen / bedste score nogensinde."}
                     >
                       <div className="table-scroll">
-                        <table className="stats-table hole-table">
+                        <table className="stats-table hole-table mobile-stat-cards">
                           <thead>
                             <tr>
                               <th>Hul</th>
@@ -1472,7 +1472,7 @@ export default function HomePage() {
                 subtitle={"Baseret p\u00e5 gennemsnitlig score mod par over spillerens seneste fem runder p\u00e5 banen."}
               >
                 <div className="table-scroll">
-                  <table className="stats-table">
+                  <table className="stats-table mobile-stat-cards">
                     <thead>
                       <tr>
                         <th>Bane</th>
