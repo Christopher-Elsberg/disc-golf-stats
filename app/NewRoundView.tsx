@@ -34,12 +34,38 @@ type DraftHole = CourseHole & {
 
 type Props = {
   currentUserId: string;
+  active: boolean;
   onQueued: () => void;
+  onOpenFriends: () => void;
 };
 
 const NEW_COURSE = "__new_course__";
 const SETUP_CACHE_KEY = "disc-golf-setup-cache-v2";
 const HOLES_CACHE_PREFIX = "disc-golf-course-holes-v2:";
+const FRIENDS_CACHE_PREFIX = "disc-golf-accepted-friends-v1:";
+
+type FriendshipRow = { requester_id: string; recipient_id: string; status: string };
+
+function acceptedFriendIds(rows: FriendshipRow[], ownId: string): string[] {
+  return [...new Set(rows.flatMap((relation) => {
+    if (relation.status !== "accepted") return [];
+    if (relation.requester_id === ownId && relation.recipient_id !== ownId) return [relation.recipient_id];
+    if (relation.recipient_id === ownId && relation.requester_id !== ownId) return [relation.requester_id];
+    return [];
+  }))];
+}
+
+function readFriendsCache(userId: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(FRIENDS_CACHE_PREFIX + userId);
+    const value: unknown = raw ? JSON.parse(raw) : null;
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
+  } catch { return []; }
+}
+function writeFriendsCache(userId: string, ids: string[]) {
+  try { window.localStorage.setItem(FRIENDS_CACHE_PREFIX + userId, JSON.stringify(ids)); }
+  catch { /* Supabase checks again during sync. */ }
+}
 
 function localDateString() {
   const now = new Date();
@@ -101,8 +127,10 @@ function writeHolesCache(courseId: string, layoutVersion: number, holes: CourseH
   }
 }
 
-export default function NewRoundView({ currentUserId, onQueued }: Props) {
+export default function NewRoundView({ currentUserId, active, onQueued, onOpenFriends }: Props) {
   const [players, setPlayers] = useState<PlayerOption[]>([]);
+  const [friendIds, setFriendIds] = useState<string[]>([]);
+  const [friendsNotice, setFriendsNotice] = useState("");
   const [courses, setCourses] = useState<CourseOption[]>([]);
   const [holes, setHoles] = useState<CourseHole[]>([]);
   const [draftHoles, setDraftHoles] = useState<DraftHole[]>([]);
@@ -141,7 +169,7 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
       setLoadingSetup(true);
       setError("");
 
-      const [playersResult, coursesResult] = await Promise.all([
+      const [playersResult, coursesResult, friendsResult] = await Promise.all([
         supabase
           .from("players")
           .select("id,name,auth_user_id")
@@ -151,6 +179,9 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
           .from("courses")
           .select("id,name,location,rating_formula,current_layout_version")
           .order("name", { ascending: true }),
+        supabase.from("friendships")
+          .select("requester_id,recipient_id,status")
+          .eq("status", "accepted"),
       ]);
 
       if (cancelled) return;
@@ -166,6 +197,8 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
 
         setPlayers(cached.players);
         setCourses(cached.courses);
+        setFriendIds(readFriendsCache(currentUserId));
+        setFriendsNotice("Offline: viser de senest kendte venner. Supabase kontrollerer igen ved synkronisering.");
         const me = cached.players.find((player) => player.auth_user_id === currentUserId);
         if (me) setSelectedPlayers([me.id]);
         setCourseId(cached.courses[0]?.id ?? NEW_COURSE);
@@ -181,6 +214,15 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
       writeSetupCache(playerRows, courseRows);
 
       const me = playerRows.find((player) => player.auth_user_id === currentUserId);
+      if (friendsResult.error) {
+        setFriendIds(readFriendsCache(currentUserId));
+        setFriendsNotice("Kunne ikke hente venner. Det kontrolleres igen ved synkronisering.");
+      } else {
+        const ids = me ? acceptedFriendIds((friendsResult.data ?? []) as FriendshipRow[], me.id) : [];
+        setFriendIds(ids);
+        writeFriendsCache(currentUserId, ids);
+        setFriendsNotice("");
+      }
       if (me) setSelectedPlayers([me.id]);
       setCourseId(courseRows[0]?.id ?? NEW_COURSE);
       setLoadingSetup(false);
@@ -192,6 +234,38 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
       cancelled = true;
     };
   }, [currentUserId]);
+
+  // Refresh after coming back from Friends without unmounting the draft editor.
+  useEffect(() => {
+    if (!active || loadingSetup) return;
+    let cancelled = false;
+    async function refreshFriends() {
+      const { data, error: friendshipError } = await supabase.from("friendships")
+        .select("requester_id,recipient_id,status")
+        .eq("status", "accepted");
+      if (cancelled) return;
+      if (friendshipError) {
+        setFriendsNotice("Kunne ikke opdatere venner. Pr\u00f8v igen, n\u00e5r du er online.");
+        return;
+      }
+      const me = players.find((p) => p.auth_user_id === currentUserId);
+      if (!me) return;
+      const ids = acceptedFriendIds((data ?? []) as FriendshipRow[], me.id);
+      setFriendIds(ids);
+      writeFriendsCache(currentUserId, ids);
+      setFriendsNotice("");
+    }
+    void refreshFriends();
+    const onFocus = () => { void refreshFriends(); };
+    const onVisibility = () => { if (document.visibilityState === "visible") void refreshFriends(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [active, loadingSetup, currentUserId, players]);
 
   // Restore after players/courses have loaded, before fetching course holes.
   useEffect(() => {
