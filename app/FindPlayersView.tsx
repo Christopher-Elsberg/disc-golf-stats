@@ -472,7 +472,15 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             <Box id="profile-rating" hidden={profileTab !== "profile-rating"} title="Ratingudvikling"><RatingPlot values={history} /></Box>
 
             <Box id="profile-best" hidden={profileTab !== "profile-best"} title="Bedste runde">
-              <p>{best ? `${best.course_name} | #${best.round_number} | ${best.total_strokes} slag (${vsPar(best.score_to_par)}) | rating ${num(best.rating, 0)}` : "Ingen runder"}</p>
+              {best ? (
+                <div className={styles.bestRoundDetail}>
+                  <strong>Rating {num(best.rating, 0)}</strong>
+                  <span>{best.course_name} | Runde #{best.round_number} | {date(best.date)}</span>
+                  <span>{best.total_strokes} slag ({vsPar(best.score_to_par)})</span>
+                </div>
+              ) : (
+                <p className={styles.muted}>Ingen runder med beregnet rating i det valgte filter.</p>
+              )}
             </Box>
 
             <Box id="profile-shots" hidden={profileTab !== "profile-shots"} title="Slagtyper">
