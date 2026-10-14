@@ -873,6 +873,63 @@ export default function NewRoundView({ currentUserId, onQueued }: Props) {
               </tbody>
             </table>
           </div>
+          <div className="mobile-score-entry" aria-label="Scorekort til mobil">
+            {roundHoles.map((hole) => (
+              <section className="mobile-hole-card" key={hole.id} aria-label={`Hul ${hole.hole_label}, par ${hole.par}`}>
+                <div className="mobile-hole-heading">
+                  <strong>{hole.hole_label}</strong>
+                  <span>Par {hole.par}</span>
+                </div>
+                <div className="mobile-hole-players">
+                  {selectedPlayerRows.map((player) => {
+                    const value = scores[player.id]?.[hole.id] ?? "";
+                    const numeric = Number(value);
+                    const diff = value !== "" && Number.isInteger(numeric) ? numeric - hole.par : null;
+                    return (
+                      <label className="mobile-score-player" key={player.id}>
+                        <span className="mobile-score-player-name">{player.name}</span>
+                        <span className="score-input-wrap">
+                          <input
+                            className="score-input"
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            max={99}
+                            step={1}
+                            value={value}
+                            onChange={(event) => updateScore(player.id, hole.id, event.target.value)}
+                            aria-label={`${player.name}, hul ${hole.hole_label}`}
+                          />
+                          <span className={`hole-diff ${diff === null ? "empty" : diff < 0 ? "under" : diff > 0 ? "over" : "even"}`}>
+                            {diff === null ? "" : toParLabel(diff)}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+            <section className="mobile-hole-card mobile-total-card" aria-label="Rundens samlede score">
+              <div className="mobile-hole-heading">
+                <strong>Samlet score</strong>
+                <span>Par {coursePar}</span>
+              </div>
+              <div className="mobile-total-list">
+                {selectedPlayerRows.map((player) => {
+                  const total = totals[player.id]?.total ?? 0;
+                  const complete = totals[player.id]?.complete ?? false;
+                  return (
+                    <div className="mobile-total-player" key={player.id}>
+                      <span>{player.name}</span>
+                      <strong>{complete ? total : "–"}</strong>
+                      <small>{complete ? toParLabel(total - coursePar) : "Mangler slag"}</small>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
         )}
 
         <div className="round-save-bar">
