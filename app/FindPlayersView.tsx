@@ -207,8 +207,14 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
     async function loadProfile() {
       setProfileLoading(true);
       setProfileError("");
-      setProfileStats(null);
-      const body: Record<string, string | number> = { player_id: selectedId! };
+      // Keep the tabs visible while another panel is fetched.
+      const apiSection = profileTab === "profile-hole-averages"
+        ? "holes"
+        : profileTab.slice("profile-".length);
+      const body: Record<string, string | number> = {
+        player_id: selectedId!,
+        section: apiSection,
+      };
       if (season !== "all") body.season = Number(season);
       if (courseId !== "all") body.course_id = courseId;
       try {
@@ -226,7 +232,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
     }
     void loadProfile();
     return () => { cancelled = true; };
-  }, [selectedId, season, courseId, currentPlayerId, isAdmin, relationships]);
+  }, [selectedId, season, courseId, currentPlayerId, isAdmin, relationships, profileTab]);
 
   useEffect(() => {
     if (selectedId) profileRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -341,7 +347,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                   </span>
                   <div className={styles.actions}>
                     <button type="button" aria-label={`Se statistik for ${player.name}`}
-                      onClick={() => { setSelectedId(player.id); setProfileTab("profile-overview"); }}>
+                      onClick={() => { setSelectedId(player.id); setProfileTab("profile-overview"); setProfileStats(null); }}>
                       Se stats
                     </button>
                     <button type="button" className={styles.quietButton}
@@ -377,7 +383,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                   </span>
                   <div className={styles.actions}>
                     {viewAllowed ? (
-                      <button type="button" onClick={() => { setSelectedId(player.id); setProfileTab("profile-overview"); }}
+                      <button type="button" onClick={() => { setSelectedId(player.id); setProfileTab("profile-overview"); setProfileStats(null); }}
                         aria-pressed={selectedId === player.id}>Se stats</button>
                     ) : !relation && player.auth_user_id && player.active ? (
                       <button type="button" disabled={!!busyActionId}
