@@ -7,6 +7,22 @@ import {
 } from "@/lib/offline-rounds";
 
 async function syncOneRound(round: PendingRound): Promise<void> {
+  // Validate participants before creating a round or a new course.
+  // The database independently enforces this during round_players writes.
+  for (const playerId of round.player_ids) {
+    const { data: allowed, error: friendError } = await supabase.rpc(
+      "disc_golf_is_self_or_friend",
+      { p_player_id: playerId },
+    );
+    if (friendError) throw new Error("Kunne ikke kontrollere vennelisten: " + friendError.message);
+    if (!allowed) {
+      throw new Error(
+        "Runden kan ikke synkroniseres: En deltager er ikke l\\u00e6ngere en accepteret ven. " +
+        "Runden ligger stadig sikkert p\\u00e5 telefonen.",
+      );
+    }
+  }
+
   let finalCourseId = round.course.id;
 
   const layoutVersion = round.course.layout_version ?? 1;
