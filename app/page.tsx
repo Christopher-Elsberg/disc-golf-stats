@@ -739,7 +739,7 @@ export default function HomePage() {
   }, [session]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || view === "profiles" || view === "newround" || view === "courses") return;
 
     let cancelled = false;
 
@@ -747,7 +747,7 @@ export default function HomePage() {
       setLoading(true);
       setError("");
 
-      const body: Record<string, string | number> = {};
+      const body: Record<string, string | number> = { section: view === "myoverview" ? "overview" : view };
       if (season !== "all") body.season = Number(season);
       if (courseId !== "all") body.course_id = courseId;
 
@@ -779,7 +779,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [session, season, courseId, statsRefreshKey]);
+  }, [session, season, courseId, statsRefreshKey, view]);
 
   const activeCourseName = useMemo(() => {
     if (courseId === "all") return "Alle baner";
