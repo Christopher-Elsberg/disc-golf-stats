@@ -39,3 +39,18 @@
   .saveBar { position: sticky; bottom: 8px; z-index: 5; }
   .saveBar button { width: 100%; }
 }
+
+
+@media (max-width:700px) {
+  .stack,.panel,.body,.holeList,.holeRow { min-width:0; }
+  .holeRow { display:grid; grid-template-columns:28px minmax(0,1fr) 76px; gap:8px; padding:10px; align-items:end; }
+  .order { grid-column:1; grid-row:1; }
+  .holeRow > .compactField:nth-child(2) { grid-column:2; grid-row:1; }
+  .holeRow > .compactField:nth-child(3) { grid-column:3; grid-row:1; }
+  .moveButtons { grid-column:2; grid-row:2; }
+  .removeButton { grid-column:3; grid-row:2; min-height:44px; }
+  .moveButtons button,.addButton,.saveBar button { min-height:44px; }
+}
+@media (max-width:350px) {
+  .holeRow { grid-template-columns:25px minmax(0,1fr) 66px; gap:5px; padding:7px; }
+}
