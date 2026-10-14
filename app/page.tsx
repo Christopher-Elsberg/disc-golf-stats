@@ -534,9 +534,9 @@ function ScorecardTable({ scorecard }: { scorecard: Scorecard }) {
             {scorecard.holes.map((hole) => (
               <tr key={hole.hole_id}>
                 <th>{hole.hole_label}</th>
-                <td>{hole.par}</td>
+                <td data-label="Par">{hole.par}</td>
                 {scorecard.players.map((player) => (
-                  <td key={player.player_id}>
+                  <td key={player.player_id} data-label={player.player_name}>
                     {scoreLookup.get(`${player.player_id}:${hole.hole_id}`) ?? "\u2013"}
                   </td>
                 ))}
@@ -544,9 +544,9 @@ function ScorecardTable({ scorecard }: { scorecard: Scorecard }) {
             ))}
             <tr className="total-row">
               <th>Sum</th>
-              <td>{scorecard.course_par}</td>
+              <td data-label="Par">{scorecard.course_par}</td>
               {scorecard.players.map((player) => (
-                <td key={player.player_id}>
+                <td key={player.player_id} data-label={player.player_name}>
                   <strong>{player.total_strokes}</strong>
                   <span className="to-par-inline">{formatToPar(player.score_to_par)}</span>
                 </td>
@@ -1286,9 +1286,9 @@ export default function HomePage() {
                       </tr></thead>
                       <tbody>{myStats.headToHead.map((row) => (
                         <tr key={row.opponent_id}>
-                          <th>{row.opponent_name}</th><td>{row.games}</td>
-                          <td>{row.wins}</td><td>{row.losses}</td>
-                          <td>{row.ties}</td><td className="rating-cell">{formatPercent(row.win_rate)}</td>
+                          <th>{row.opponent_name}</th><td data-label="Kampe">{row.games}</td>
+                          <td data-label="Sejre">{row.wins}</td><td data-label="Nederlag">{row.losses}</td>
+                          <td data-label="Uafgjort">{row.ties}</td><td data-label="Winrate" className="rating-cell">{formatPercent(row.win_rate)}</td>
                         </tr>
                       ))}</tbody>
                     </table>
@@ -1318,20 +1318,20 @@ export default function HomePage() {
                       {personalStats!.stats.shot_counts.map((player) => (
                         <tr key={player.player_id}>
                           <th>{player.player_name}</th>
-                          <td>{player.holes_played}</td>
-                          <td>
+                          <td data-label="Huller">{player.holes_played}</td>
+                          <td data-label="Streger">
                             {formatPercent(player.strokes_over_10.rate)}
                             <span className="muted-cell">{player.strokes_over_10.count} stk.</span>
                           </td>
-                          <td>
+                          <td data-label="Birdies">
                             {formatPercent(player.birdie.rate)}
                             <span className="muted-cell">{player.birdie.count} stk.</span>
                           </td>
-                          <td>
+                          <td data-label="Bogeys">
                             {formatPercent(player.bogey.rate)}
                             <span className="muted-cell">{player.bogey.count} stk.</span>
                           </td>
-                          <td>
+                          <td data-label="Double+">
                             {formatPercent(player.double_plus.rate)}
                             <span className="muted-cell">{player.double_plus.count} stk.</span>
                           </td>
@@ -1376,10 +1376,10 @@ export default function HomePage() {
                               return (
                                 <tr key={player.player_id}>
                                   <th>{player.player_name}</th>
-                                  <td>{player.rounds}</td>
-                                  <td>{formatToPar(player.front_to_par)}</td>
-                                  <td>{formatToPar(player.back_to_par)}</td>
-                                  <td>{formatToPar(difference)}</td>
+                                  <td data-label="Runder">{player.rounds}</td>
+                                  <td data-label="Front">{formatToPar(player.front_to_par)}</td>
+                                  <td data-label="Back">{formatToPar(player.back_to_par)}</td>
+                                  <td data-label="Forskel">{formatToPar(difference)}</td>
                                 </tr>
                               );
                             })}
@@ -1446,9 +1446,9 @@ export default function HomePage() {
                             {course.holes.map((hole) => (
                               <tr key={hole.hole_id}>
                                 <th>{hole.hole_label}</th>
-                                <td>{hole.par}</td>
+                                <td data-label="Par">{hole.par}</td>
                                 {hole.players.map((player) => (
-                                  <td key={player.player_id}>
+                                  <td key={player.player_id} data-label={player.player_name}>
                                     <strong>{formatNumber(player.average_strokes_last_five)}</strong>
                                     <span className="muted-cell">
                                       bedst {player.best_strokes_all_time ?? "\u2013"}
@@ -1486,12 +1486,12 @@ export default function HomePage() {
                     <tbody>
                       {personalStats!.stats.best_worst_holes.map((item) => (
                         <tr key={`${item.course_id}:${item.player_id}`}>
-                          <td>{item.course_name}</td>
+                          <td data-label="Bane">{item.course_name}</td>
                           <th>{item.player_name}</th>
-                          <td>{item.best_hole?.hole_label ?? "\u2013"}</td>
-                          <td>{formatToPar(item.best_hole?.average_to_par)}</td>
-                          <td>{item.worst_hole?.hole_label ?? "\u2013"}</td>
-                          <td>{formatToPar(item.worst_hole?.average_to_par)}</td>
+                          <td data-label="Bedste hul">{item.best_hole?.hole_label ?? "\u2013"}</td>
+                          <td data-label="Bedste vs. par">{formatToPar(item.best_hole?.average_to_par)}</td>
+                          <td data-label="Værste hul">{item.worst_hole?.hole_label ?? "\u2013"}</td>
+                          <td data-label="Værste vs. par">{formatToPar(item.worst_hole?.average_to_par)}</td>
                         </tr>
                       ))}
                     </tbody>
