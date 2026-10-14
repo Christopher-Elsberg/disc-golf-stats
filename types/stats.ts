@@ -18,7 +18,10 @@ export type PlayerStat = {
   average_score_to_par: number | null;
   handicap: number | null;
   rating: number | null;
-  consistency_sd_to_par: number | null;
+  /** Population standard deviation of rated round ratings; null with fewer than two. */
+  consistency_sd_rating: number | null;
+  /** Number of rated rounds included in the stability calculation. */
+  consistency_rated_rounds_used: number;
   last_five_rounds_used: number;
 };
 
