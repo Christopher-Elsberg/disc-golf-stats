@@ -1,4 +1,4 @@
-const PAGE_SIZE = 1000;
+export const PAGE_SIZE = 1000;
 const ROUND_ID_CHUNK = 50;
 
 /** Stable ordering is essential when PostgREST returns more than one page. */
