@@ -504,8 +504,8 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                 <thead><tr><th>Bane</th><th>Bedste hul</th><th>Gns. vs. par</th><th>V&#xE6;rste hul</th><th>Gns. vs. par</th></tr></thead>
                 <tbody>{bestWorst.map((r) => <tr key={r.course_id}>
                   <th>{r.course_name}</th><td data-label="Bedste hul">{r.best_hole?.hole_label ?? "-"}</td>
-                  <td data-label="Bedste vs. par">{vsPar(r.best_hole?.average_to_par)}</td><td data-label="Værste hul">{r.worst_hole?.hole_label ?? "-"}</td>
-                  <td data-label="Værste vs. par">{vsPar(r.worst_hole?.average_to_par)}</td>
+                  <td data-label="Bedste vs. par">{vsPar(r.best_hole?.average_to_par)}</td><td data-label={"V\u00e6rste hul"}>{r.worst_hole?.hole_label ?? "-"}</td>
+                  <td data-label={"V\u00e6rste vs. par"}>{vsPar(r.worst_hole?.average_to_par)}</td>
                 </tr>)}</tbody>
               </table></div> : <p className={styles.muted}>Ingen huldata.</p>}
             </Box>
