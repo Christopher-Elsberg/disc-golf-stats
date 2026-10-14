@@ -425,13 +425,13 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
               ...item,
               best_round: item.best_round ? personalizeRound(item.best_round) : null,
             })),
-          hole_stats: holeStats.map((course) => ({
+          hole_stats: needs("holes") ? holeStats.map((course) => ({
             ...course,
             holes: course.holes.map((hole) => ({
               ...hole,
               players: hole.players.filter((r) => r.player_id === targetPlayerId),
             })),
-          })),
+          })) : [],
           best_worst_holes: bestWorstHoles.filter((r) => r.player_id === targetPlayerId),
           last_five_scorecards: targetCards,
           player_last_five_scorecards: { [targetPlayerId]: targetCards },
