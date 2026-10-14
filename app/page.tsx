@@ -1208,8 +1208,8 @@ export default function HomePage() {
                       <li key={`${entry.round_id}:${entry.player_id}`}>
                         <strong>Runde {entry.round_number} &#xB7; {entry.player_name}</strong>
                         <span>{entry.missing_holes.length
-                          ? `Mangler score p\\u00e5: ${entry.missing_holes.join(", ")}`
-                          : "Banens hulops\\u00e6tning findes ikke for denne runde."}</span>
+                          ? `Mangler score p\u00e5: ${entry.missing_holes.join(", ")}`
+                          : "Banens hulops\u00e6tning findes ikke for denne runde."}</span>
                       </li>
                     ))}
                   </ul>
