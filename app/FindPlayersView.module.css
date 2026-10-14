@@ -70,3 +70,18 @@
   .friendRow .actions, .result .actions { width:100%; padding-left:47px; margin-left:0; justify-content:flex-start; }
   .friendRow .actions button, .result .actions button { min-height:36px; }
 }
+
+
+@media (max-width:700px) {
+  .root,.profile,.section,.holeSections { min-width:0; }
+  .tableScroll:has(> .mobileCards) { overflow:visible; }
+  .mobileCards,.mobileCards tbody { display:block; width:100%; min-width:0; }
+  .mobileCards thead { display:none; }
+  .mobileCards tbody tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-bottom:9px; padding:9px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+  .mobileCards tbody th { grid-column:1/-1; white-space:normal; overflow-wrap:anywhere; padding:0 0 7px; border-bottom:1px solid var(--line); color:var(--forest); }
+  .mobileCards tbody td { display:flex; flex-direction:column; min-width:0; gap:4px; border:0; padding:6px 2px; white-space:normal; overflow-wrap:anywhere; font-weight:750; }
+  .mobileCards tbody td::before { content:attr(data-label); color:var(--muted); font-size:.7rem; font-weight:700; }
+  .plotScroll { overflow:hidden; }
+  .plot { width:100%; min-width:0; height:auto; }
+  .actions button,.close,.refreshButton { min-height:44px; }
+}
