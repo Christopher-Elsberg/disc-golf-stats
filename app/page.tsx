@@ -1251,9 +1251,11 @@ export default function HomePage() {
                     <small>p&#xE5; tv&#xE6;rs af valgte baner</small>
                   </article>
                   <article className="kpi-card">
-                    <span>Stabilitet &#x3C3;</span>
-                    <strong>{formatNumber(myStats?.player?.consistency_sd_to_par)}</strong>
-                    <small>lavere betyder mere stabil</small>
+                    <span>Stabilitet &#x3C3; (rating)</span>
+                    <strong>{formatNumber(myStats?.player?.consistency_sd_rating)}</strong>
+                    <small>{(myStats?.player?.consistency_rated_rounds_used ?? 0) < 2
+                      ? "Kr\u00e6ver mindst 2 ratede runder"
+                      : `${myStats?.player?.consistency_rated_rounds_used} ratede runder; lavere = mere stabil`}</small>
                   </article>
                 </div>
                 <Panel
