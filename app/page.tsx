@@ -1201,6 +1201,19 @@ export default function HomePage() {
               <div className="warning-banner">
                 <strong>{personalStats!.stats.incomplete_entries.length} ufuldst&#xE6;ndige spiller-runder</strong>
                 <span>De er ikke medregnet i den f&#xE6;rdige statistik.</span>
+                <details className="incomplete-details">
+                  <summary>Vis hvilke runder og huller der mangler</summary>
+                  <ul>
+                    {personalStats!.stats.incomplete_entries.map((entry) => (
+                      <li key={`${entry.round_id}:${entry.player_id}`}>
+                        <strong>Runde {entry.round_number} &#xB7; {entry.player_name}</strong>
+                        <span>{entry.missing_holes.length
+                          ? `Mangler score p\\u00e5: ${entry.missing_holes.join(", ")}`
+                          : "Banens hulops\\u00e6tning findes ikke for denne runde."}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               </div>
             ) : null}
 
