@@ -10,6 +10,7 @@ type PlayerOption = {
   id: string;
   name: string;
   auth_user_id: string | null;
+  role?: string | null;
 };
 
 type CourseOption = {
@@ -172,7 +173,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
       const [playersResult, coursesResult, friendsResult] = await Promise.all([
         supabase
           .from("players")
-          .select("id,name,auth_user_id")
+          .select("id,name,auth_user_id,role")
           .eq("active", true)
           .order("name", { ascending: true }),
         supabase
@@ -401,11 +402,13 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
     };
   }, [draftReady, courseId, isNewCourse, draftLayoutVersion, selectedCourse?.current_layout_version]);
 
+  const isAdmin = players.some((player) => player.auth_user_id === currentUserId && player.role === "admin");
+
   const allowedPlayers = useMemo(
     () => players.filter((player) =>
-      player.auth_user_id === currentUserId || friendIds.includes(player.id)
+      isAdmin || player.auth_user_id === currentUserId || friendIds.includes(player.id)
     ),
-    [players, currentUserId, friendIds],
+    [players, currentUserId, friendIds, isAdmin],
   );
 
   const blockedSelectedPlayers = useMemo(
@@ -547,7 +550,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
 
   function validateRound() {
     if (!courseId) return "V\u00e6lg en bane.";
-    if (blockedSelectedPlayers.length > 0) return "Kladden indeholder en spiller, som ikke er accepteret ven. Fjern spilleren eller bliv venner igen.";
+    if (blockedSelectedPlayers.length > 0) return "Kladden indeholder spillere, du ikke har adgang til. Fjern dem eller opdater vennelisten.";
     if (!playedOn) return "V\u00e6lg en dato.";
     if (selectedPlayerRows.length === 0) return "V\u00e6lg mindst \u00e9n spiller.";
 
@@ -851,7 +854,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
               <span>Spillere</span>
               <strong>{selectedPlayerRows.length} valgt</strong>
             </div>
-            <small>Du kan kun v&#xE6;lge dig selv og accepterede venner.</small>
+            <small>{isAdmin ? "Admin: Du kan v&#xE6;lge alle aktive spillere." : "Du kan kun v&#xE6;lge dig selv og accepterede venner."}</small>
           </div>
 
           <div className="player-picker">
@@ -873,7 +876,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
               );
             })}
           </div>
-          {allowedPlayers.length <= 1 ? (
+          {!isAdmin && allowedPlayers.length <= 1 ? (
             <div className="round-friends-notice">
               Du har endnu ingen accepterede venner at spille med. Du kan stadig gemme en solo-runde.
               <button type="button" onClick={onOpenFriends}>Find venner</button>
