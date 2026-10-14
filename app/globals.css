@@ -1602,3 +1602,12 @@ select:focus-visible {
 .round-blocked-friends { margin: 10px; }
 .round-friends-notice button,.round-blocked-friends button { max-width: 100%; }
 }
+
+
+/* Expandable information about incomplete rounds. */
+.incomplete-details { flex-basis: 100%; min-width: 0; }
+.incomplete-details summary { cursor: pointer; font-weight: 750; padding: 4px 0; }
+.incomplete-details ul { display: grid; gap: 8px; margin: 8px 0 0; padding-left: 18px; }
+.incomplete-details li { overflow-wrap: anywhere; }
+.incomplete-details li strong,.incomplete-details li span { display: block; }
+.incomplete-details li span { margin-top: 3px; font-size: .8rem; }
