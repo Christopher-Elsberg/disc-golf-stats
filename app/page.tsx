@@ -561,7 +561,7 @@ function ScorecardTable({ scorecard }: { scorecard: Scorecard }) {
 
 function bestRoundLabel(item: BestRound) {
   if (!item.best_round) return "\u2013";
-  return `${item.best_round.total_strokes} (${formatToPar(item.best_round.score_to_par)})`;
+  return `Rating ${formatNumber(item.best_round.rating, 0)}`;
 }
 
 export default function HomePage() {
@@ -1397,7 +1397,7 @@ export default function HomePage() {
             {view === "best" ? (
               <Panel
                 title="Min bedste runde"
-                subtitle={"Bedste score m\u00e5lt mod par; laveste score bryder lighed."}
+                subtitle={"H\u00f8jeste runderating p\u00e5 tv\u00e6rs af baner. Runder uden rating t\u00e6ller ikke med."}
               >
                 <div className="best-round-grid">
                   {personalStats!.stats.best_rounds.map((item) => (
@@ -1408,11 +1408,11 @@ export default function HomePage() {
                         <>
                           <p>{item.best_round.course_name}</p>
                           <small>
-                            Runde {item.best_round.round_number} &#xB7; {formatDate(item.best_round.date)} &#xB7; rating {formatNumber(item.best_round.rating, 0)}
+                            Runde {item.best_round.round_number} &#xB7; {formatDate(item.best_round.date)} &#xB7; {item.best_round.total_strokes} slag ({formatToPar(item.best_round.score_to_par)})
                           </small>
                         </>
                       ) : (
-                        <small>Ingen runder</small>
+                        <small>Ingen ratede runder</small>
                       )}
                     </article>
                   ))}
