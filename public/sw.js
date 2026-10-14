@@ -1,4 +1,4 @@
-const CACHE_NAME = "disc-golf-stats-v3";
+const CACHE_NAME = "disc-golf-stats-v5";
 
 const APP_SHELL = [
   "/",
