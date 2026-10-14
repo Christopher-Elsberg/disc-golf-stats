@@ -1490,8 +1490,8 @@ export default function HomePage() {
                           <th>{item.player_name}</th>
                           <td data-label="Bedste hul">{item.best_hole?.hole_label ?? "\u2013"}</td>
                           <td data-label="Bedste vs. par">{formatToPar(item.best_hole?.average_to_par)}</td>
-                          <td data-label="Værste hul">{item.worst_hole?.hole_label ?? "\u2013"}</td>
-                          <td data-label="Værste vs. par">{formatToPar(item.worst_hole?.average_to_par)}</td>
+                          <td data-label={"V\u00e6rste hul"}>{item.worst_hole?.hole_label ?? "\u2013"}</td>
+                          <td data-label={"V\u00e6rste vs. par"}>{formatToPar(item.worst_hole?.average_to_par)}</td>
                         </tr>
                       ))}
                     </tbody>
