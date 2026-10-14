@@ -1,6 +1,7 @@
-import type { PlayerRow, CourseRow, HoleRow, RoundRow, RoundPlayerRow, HoleScoreRow, PlayerRoundResult, HoleResult } from "./models.ts";
-import { roundTo, mean, populationSd, newestFirst, oldestFirst, courseLayoutKey } from "./shared.ts";
-import { calculateCourseRating } from "./rating.ts";
+import type { PlayerRow, CourseRow, HoleRow, RoundRow, RoundPlayerRow, HoleScoreRow, PlayerRoundResult } from "./models.ts";
+import { roundTo, mean, newestFirst, oldestFirst, courseLayoutKey } from "./shared.ts";
+import { assembleRoundResults } from "./round-results.ts";
+import { calculatePlayerOverview } from "./player-overview.ts";
 
 export type StatisticsContext = {
   players: PlayerRow[];
@@ -41,113 +42,10 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
       }
 
 
-      const playerById = new Map(players.map((p) => [p.id, p]));
-      const roundById = new Map(selectedRounds.map((r) => [r.id, r]));
-
-      const scoresByRoundPlayer = new Map<string, HoleScoreRow[]>();
-      for (const score of holeScores) {
-        const key = `${score.round_id}:${score.player_id}`;
-        const arr = scoresByRoundPlayer.get(key) ?? [];
-        arr.push(score);
-        scoresByRoundPlayer.set(key, arr);
-      }
-
-      const completeResults: PlayerRoundResult[] = [];
-      const incompleteEntries: any[] = [];
-      const formulaErrors: any[] = [];
-
-      for (const rp of roundPlayers) {
-        const round = roundById.get(rp.round_id);
-        const player = playerById.get(rp.player_id);
-        if (!round || !player) continue;
-
-        const course = courseById.get(round.course_id);
-        if (!course) continue;
-
-        const layoutVersion = Number(round.course_layout_version || 1);
-        const courseHoles =
-          holesByCourseLayout.get(courseLayoutKey(round.course_id, layoutVersion)) ?? [];
-
-        if (courseHoles.length === 0) {
-          incompleteEntries.push({
-            round_id: round.id,
-            round_number: round.round_number,
-            player_id: player.id,
-            player_name: player.name,
-            reason: "missing_course_layout",
-            course_layout_version: layoutVersion,
-            missing_holes: [],
-          });
-          continue;
-        }
-
-        const rawScores = scoresByRoundPlayer.get(`${rp.round_id}:${rp.player_id}`) ?? [];
-        const scoreMap = new Map(rawScores.map((s) => [s.course_hole_id, Number(s.strokes)]));
-        const missingHoles = courseHoles.filter((h) => !scoreMap.has(h.id));
-
-        if (missingHoles.length > 0) {
-          incompleteEntries.push({
-            round_id: round.id,
-            round_number: round.round_number,
-            player_id: player.id,
-            player_name: player.name,
-            reason: "missing_scores",
-            course_layout_version: layoutVersion,
-            missing_holes: missingHoles.map((h) => h.hole_label),
-          });
-          continue;
-        }
-
-        const holeResults: HoleResult[] = courseHoles.map((hole) => {
-          const strokes = scoreMap.get(hole.id)!;
-          return {
-            hole_id: hole.id,
-            hole_label: hole.hole_label,
-            display_order: hole.display_order,
-            par: Number(hole.par),
-            strokes,
-            to_par: strokes - Number(hole.par),
-          };
-        });
-
-        const totalStrokes = holeResults.reduce((sum, h) => sum + h.strokes, 0);
-        const coursePar = holeResults.reduce((sum, h) => sum + h.par, 0);
-        const scoreToPar = totalStrokes - coursePar;
-
-        let rating: number | null = null;
-        try {
-          rating = calculateCourseRating(course, totalStrokes, coursePar);
-        } catch (error) {
-          formulaErrors.push({
-            course_id: course.id,
-            course_name: course.name,
-            rating_formula: course.rating_formula,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          rating = null;
-        }
-
-        completeResults.push({
-          round_id: round.id,
-          round_number: Number(round.round_number),
-          date: round.played_on,
-          season: Number(round.season),
-          course_id: course.id,
-          course_name: course.name,
-          course_layout_version: layoutVersion,
-          player_id: player.id,
-          player_name: player.name,
-          total_strokes: totalStrokes,
-          course_par: coursePar,
-          score_to_par: scoreToPar,
-          rating,
-          holes: holeResults,
-        });
-      }
-
-      const uniqueFormulaErrors = [...new Map(
-        formulaErrors.map((item) => [item.course_id, item]),
-      ).values()];
+      const { completeResults, incompleteEntries, uniqueFormulaErrors } = assembleRoundResults({
+        players, selectedRounds, roundPlayers, holeScores,
+        courseById, holesByCourseLayout,
+      });
 
       const resultsByRound = new Map<string, PlayerRoundResult[]>();
       for (const result of completeResults) {
@@ -163,60 +61,7 @@ export function buildStatisticsResponse(context: StatisticsContext): Response {
 
       const targetPlayers = relevantPlayers.filter((p) => p.id === targetPlayerId);
 
-      const playerStats = targetPlayers.map((player) => {
-        const playerResults = completeResults
-          .filter((r) => r.player_id === player.id)
-          .sort(newestFirst);
-
-        const lastFiveForHandicap = playerResults.slice(0, 5);
-        const ratedRoundRatings = playerResults
-          .map((r) => r.rating)
-          .filter((rating): rating is number => rating !== null && Number.isFinite(rating));
-        const lastFiveRated = playerResults
-          .filter((r) => r.rating !== null)
-          .slice(0, 5);
-
-        let roundWins = 0;
-        let outrightWins = 0;
-        let tiedWins = 0;
-
-        for (const result of playerResults) {
-          const roundResults = resultsByRound.get(result.round_id) ?? [];
-          if (roundResults.length < 2) continue;
-          const best = Math.min(...roundResults.map((r) => r.total_strokes));
-          const winners = roundResults.filter((r) => r.total_strokes === best);
-          if (result.total_strokes === best) {
-            roundWins += 1;
-            if (winners.length === 1) outrightWins += 1;
-            else tiedWins += 1;
-          }
-        }
-
-        return {
-          player_id: player.id,
-          player_name: player.name,
-          rounds_played: playerResults.length,
-          round_wins: roundWins,
-          outright_round_wins: outrightWins,
-          tied_round_wins: tiedWins,
-          average_strokes: roundTo(mean(playerResults.map((r) => r.total_strokes))),
-          average_score_to_par: roundTo(mean(playerResults.map((r) => r.score_to_par))),
-          handicap: roundTo(
-            mean(lastFiveForHandicap.map((r) => r.course_par - r.total_strokes)),
-          ),
-          rating: roundTo(
-            mean(lastFiveRated.map((r) => r.rating).filter((r): r is number => r !== null)),
-          ),
-          // Standard deviation of all rated round performances in the active filters.
-          // With fewer than two ratings there is no meaningful consistency measure.
-          consistency_sd_rating: ratedRoundRatings.length >= 2
-            ? roundTo(populationSd(ratedRoundRatings))
-            : null,
-          consistency_rated_rounds_used: ratedRoundRatings.length,
-          last_five_rounds_used: lastFiveForHandicap.length,
-          last_five_rated_rounds_used: lastFiveRated.length,
-        };
-      });
+      const playerStats = calculatePlayerOverview(targetPlayers, completeResults, resultsByRound);
 
       const headToHead: any[] = [];
       if (needs("headtohead")) {
