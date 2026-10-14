@@ -1591,3 +1591,14 @@ select:focus-visible {
   .mobile-score-entry { padding: 7px; }
   .mobile-score-entry .score-input-wrap,.mobile-score-entry .score-input { width: 76px; }
 }
+
+
+/* Round participant selection: self and accepted friends only. */
+.round-friends-notice,.round-friends-help { margin: 10px 22px 0; padding: 11px 13px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; color: var(--muted); font-size: .83rem; line-height: 1.45; }
+.round-friends-notice button,.round-blocked-friends button { margin: 8px 8px 0 0; padding: 9px 13px; min-height: 44px; border-radius: 10px; border: 1px solid var(--forest); background: var(--mint); color: var(--forest); font: inherit; font-weight: 750; cursor: pointer; }
+.round-blocked-friends { margin: 10px 22px; }
+@media (max-width: 700px) {
+.round-friends-notice,.round-friends-help { margin: 8px 10px; }
+.round-blocked-friends { margin: 10px; }
+.round-friends-notice button,.round-blocked-friends button { max-width: 100%; }
+}
