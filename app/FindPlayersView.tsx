@@ -66,14 +66,14 @@ function ProfileScorecard({ scorecard }: { scorecard: Scorecard }) {
               const strokes = scores.get(hole.hole_id);
               return (
                 <tr key={hole.hole_id}>
-                  <th>{hole.hole_label}</th><td>{hole.par}</td>
-                  <td>{strokes ?? "-"}</td>
-                  <td>{strokes == null ? "-" : vsPar(strokes - hole.par)}</td>
+                  <th>{hole.hole_label}</th><td data-label="Par">{hole.par}</td>
+                  <td data-label="Slag">{strokes ?? "-"}</td>
+                  <td data-label="Vs. par">{strokes == null ? "-" : vsPar(strokes - hole.par)}</td>
                 </tr>
               );
             })}
-            <tr className={styles.total}><th>I alt</th><td>{scorecard.course_par}</td>
-              <td>{player.total_strokes}</td><td>{vsPar(player.score_to_par)}</td>
+            <tr className={styles.total}><th>I alt</th><td data-label="Par">{scorecard.course_par}</td>
+              <td data-label="Slag">{player.total_strokes}</td><td data-label="Vs. par">{vsPar(player.score_to_par)}</td>
             </tr>
           </tbody>
         </table>
@@ -442,8 +442,8 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
               {recent.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Vs. par</th><th>Rating</th></tr></thead>
                 <tbody>{recent.map((r) => <tr key={r.round_id}>
-                  <th>#{r.round_number}</th><td>{date(r.date)}</td><td>{r.course_name}</td>
-                  <td>{r.total_strokes}</td><td>{vsPar(r.score_to_par)}</td><td>{num(r.rating, 0)}</td>
+                  <th>#{r.round_number}</th><td data-label="Dato">{date(r.date)}</td><td data-label="Bane">{r.course_name}</td>
+                  <td data-label="Slag">{r.total_strokes}</td><td data-label="Vs. par">{vsPar(r.score_to_par)}</td><td data-label="Rating">{num(r.rating, 0)}</td>
                 </tr>)}</tbody>
               </table></div> : <p className={styles.muted}>Ingen runder.</p>}
             </Box>
@@ -452,8 +452,8 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
               {history.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Par</th><th>Vs. par</th><th>Rating</th></tr></thead>
                 <tbody>{[...history].sort((a, b) => b.round_number - a.round_number).map((r) => <tr key={r.round_id}>
-                  <th>#{r.round_number}</th><td>{date(r.date)}</td><td>{r.course_name}</td>
-                  <td>{r.total_strokes}</td><td>{r.course_par}</td><td>{vsPar(r.score_to_par)}</td><td>{num(r.rating, 0)}</td>
+                  <th>#{r.round_number}</th><td data-label="Dato">{date(r.date)}</td><td data-label="Bane">{r.course_name}</td>
+                  <td data-label="Slag">{r.total_strokes}</td><td data-label="Par">{r.course_par}</td><td data-label="Vs. par">{vsPar(r.score_to_par)}</td><td data-label="Rating">{num(r.rating, 0)}</td>
                 </tr>)}</tbody>
               </table></div> : <p className={styles.muted}>Ingen runder i dette filter.</p>}
             </Box>
@@ -467,9 +467,9 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
             <Box id="profile-shots" title="Slagtyper">
               {shot ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Huller</th><th>Streger</th><th>Birdies</th><th>Bogeys</th><th>Double+</th></tr></thead>
-                <tbody><tr><td>{shot.holes_played}</td>
+                <tbody><tr><td data-label="Huller">{shot.holes_played}</td>
                   {[shot.strokes_over_10, shot.birdie, shot.bogey, shot.double_plus].map((item, index) =>
-                    <td key={index}>{item.count} ({num(item.rate, 0)}%)</td>
+                    <td key={index} data-label={["Streger", "Birdies", "Bogeys", "Double+"][index]}>{item.count} ({num(item.rate, 0)}%)</td>
                   )}</tr></tbody>
               </table></div> : <p className={styles.muted}>Ingen slagdata.</p>}
             </Box>
@@ -480,10 +480,10 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                 <tbody>{headToHead.map((r) => {
                   const first = r.player_1_id === selected.id;
                   return <tr key={`${r.player_1_id}:${r.player_2_id}`}>
-                    <th>{first ? r.player_2_name : r.player_1_name}</th><td>{r.games}</td>
-                    <td>{first ? r.player_1_wins : r.player_2_wins}</td>
-                    <td>{first ? r.player_2_wins : r.player_1_wins}</td>
-                    <td>{r.ties}</td><td>{num(first ? r.player_1_win_rate : r.player_2_win_rate, 0)}%</td>
+                    <th>{first ? r.player_2_name : r.player_1_name}</th><td data-label="Kampe">{r.games}</td>
+                    <td data-label="Sejre">{first ? r.player_1_wins : r.player_2_wins}</td>
+                    <td data-label="Nederlag">{first ? r.player_2_wins : r.player_1_wins}</td>
+                    <td data-label="Uafgjort">{r.ties}</td><td data-label="Winrate">{num(first ? r.player_1_win_rate : r.player_2_win_rate, 0)}%</td>
                   </tr>;
                 })}</tbody>
               </table></div> : <p className={styles.muted}>Ingen direkte opg&#xF8;r i det valgte filter.</p>}
@@ -493,8 +493,8 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
               {frontBack.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Bane</th><th>Runder</th><th>Front</th><th>Back</th></tr></thead>
                 <tbody>{frontBack.map((r) => <tr key={r.course_name}>
-                  <th>{r.course_name}</th><td>{r.rounds}</td>
-                  <td>{vsPar(r.front_to_par)}</td><td>{vsPar(r.back_to_par)}</td>
+                  <th>{r.course_name}</th><td data-label="Runder">{r.rounds}</td>
+                  <td data-label="Front">{vsPar(r.front_to_par)}</td><td data-label="Back">{vsPar(r.back_to_par)}</td>
                 </tr>)}</tbody>
               </table></div> : <p className={styles.muted}>Ingen Front / Back-data.</p>}
             </Box>
@@ -503,9 +503,9 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
               {bestWorst.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Bane</th><th>Bedste hul</th><th>Gns. vs. par</th><th>V&#xE6;rste hul</th><th>Gns. vs. par</th></tr></thead>
                 <tbody>{bestWorst.map((r) => <tr key={r.course_id}>
-                  <th>{r.course_name}</th><td>{r.best_hole?.hole_label ?? "-"}</td>
-                  <td>{vsPar(r.best_hole?.average_to_par)}</td><td>{r.worst_hole?.hole_label ?? "-"}</td>
-                  <td>{vsPar(r.worst_hole?.average_to_par)}</td>
+                  <th>{r.course_name}</th><td data-label="Bedste hul">{r.best_hole?.hole_label ?? "-"}</td>
+                  <td data-label="Bedste vs. par">{vsPar(r.best_hole?.average_to_par)}</td><td data-label="Værste hul">{r.worst_hole?.hole_label ?? "-"}</td>
+                  <td data-label="Værste vs. par">{vsPar(r.worst_hole?.average_to_par)}</td>
                 </tr>)}</tbody>
               </table></div> : <p className={styles.muted}>Ingen huldata.</p>}
             </Box>
@@ -516,10 +516,10 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
               <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Hul</th><th>Par</th><th>Gns. slag</th><th>Gns. vs. par</th><th>Bedste score</th></tr></thead>
                 <tbody>{course.holes.map((hole) => <tr key={hole.hole_id}>
-                  <th>{hole.hole_label}</th><td>{hole.par}</td>
-                  <td>{num(hole.player.average_strokes_last_five)}</td>
-                  <td>{vsPar(hole.player.average_to_par_last_five)}</td>
-                  <td>{hole.player.best_strokes_all_time ?? "-"}</td>
+                  <th>{hole.hole_label}</th><td data-label="Par">{hole.par}</td>
+                  <td data-label="Gns. slag">{num(hole.player.average_strokes_last_five)}</td>
+                  <td data-label="Gns. vs. par">{vsPar(hole.player.average_to_par_last_five)}</td>
+                  <td data-label="Bedste score">{hole.player.best_strokes_all_time ?? "-"}</td>
                 </tr>)}</tbody>
               </table></div>
             </Box>)}
