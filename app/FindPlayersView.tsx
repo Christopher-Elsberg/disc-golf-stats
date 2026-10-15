@@ -39,6 +39,20 @@ function date(value: string): string {
     : value;
 }
 
+const PROFILE_TAB_DESCRIPTIONS: Record<string, string> = {
+  "profile-overview": "Et samlet indblik i spillerens rating, resultater og stabilitet.",
+  "profile-recent": "De nyeste scorekort og runder, samlet med bane, score og rating.",
+  "profile-allrounds": "Hele spillerens rundehistorik, s\u00e5 du kan f\u00f8lge udviklingen over tid.",
+  "profile-scorecards": "Se slagene hul for hul i de seneste spillede runder.",
+  "profile-headtohead": "Direkte opg\u00f8r mod spillere, der har deltaget i de samme runder.",
+  "profile-shots": "Fordelingen af birdies, bogeys og andre scorer gennem spillede huller.",
+  "profile-frontback": "Sammenlign pr\u00e6stationerne p\u00e5 banens f\u00f8rste og sidste halvdel.",
+  "profile-best": "Den bedst ratede runde, uanset hvilken bane den blev spillet p\u00e5.",
+  "profile-hole-averages": "Se gennemsnit og personlige bedste scorer p\u00e5 hvert hul.",
+  "profile-bestworst": "Hvilke huller fungerer bedst, og hvor tabes flest slag?",
+  "profile-rating": "Se runderatingen udvikle sig fra runde til runde.",
+};
+
 function Box({ title, id, children, hidden }: { title: string; id?: string; children: React.ReactNode; hidden?: boolean }) {
   return (
     <section id={id} className={styles.section} hidden={hidden}>
@@ -444,6 +458,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
               </button>
             ))}
           </nav>
+          <p className={styles.tabDescription}>{PROFILE_TAB_DESCRIPTIONS[profileTab] ?? PROFILE_TAB_DESCRIPTIONS["profile-overview"]}</p>
 
           {!p ? <section className={styles.section}><p>Ingen komplette runder i det valgte filter.</p></section> : <>
             <div id="profile-overview" className={styles.kpis} hidden={profileTab !== "profile-overview"}>
@@ -468,7 +483,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Vs. par</th><th>Rating</th></tr></thead>
                 <tbody>{recent.map((r) => <tr key={r.round_id}>
                   <th>#{r.round_number}</th><td data-label="Dato">{date(r.date)}</td><td data-label="Bane">{r.course_name}</td>
-                  <td data-label="Slag">{r.total_strokes}</td><td data-label="Vs. par">{vsPar(r.score_to_par)}</td><td data-label="Rating">{num(r.rating, 0)}</td>
+                  <td data-label="Slag">{r.total_strokes}</td><td data-label="Vs. par">{vsPar(r.score_to_par)}</td><td data-label="Rating"><span className={styles.metricPill}>{num(r.rating, 0)}</span></td>
                 </tr>)}</tbody>
               </table></div> : <p className={styles.muted}>Ingen runder.</p>}
             </Box>
@@ -478,7 +493,7 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Par</th><th>Vs. par</th><th>Rating</th></tr></thead>
                 <tbody>{[...history].sort((a, b) => b.round_number - a.round_number).map((r) => <tr key={r.round_id}>
                   <th>#{r.round_number}</th><td data-label="Dato">{date(r.date)}</td><td data-label="Bane">{r.course_name}</td>
-                  <td data-label="Slag">{r.total_strokes}</td><td data-label="Par">{r.course_par}</td><td data-label="Vs. par">{vsPar(r.score_to_par)}</td><td data-label="Rating">{num(r.rating, 0)}</td>
+                  <td data-label="Slag">{r.total_strokes}</td><td data-label="Par">{r.course_par}</td><td data-label="Vs. par">{vsPar(r.score_to_par)}</td><td data-label="Rating"><span className={styles.metricPill}>{num(r.rating, 0)}</span></td>
                 </tr>)}</tbody>
               </table></div> : <p className={styles.muted}>Ingen runder i dette filter.</p>}
             </Box>
@@ -516,7 +531,12 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                     <th>{first ? r.player_2_name : r.player_1_name}</th><td data-label="Kampe">{r.games}</td>
                     <td data-label="Sejre">{first ? r.player_1_wins : r.player_2_wins}</td>
                     <td data-label="Nederlag">{first ? r.player_2_wins : r.player_1_wins}</td>
-                    <td data-label="Uafgjort">{r.ties}</td><td data-label="Winrate">{num(first ? r.player_1_win_rate : r.player_2_win_rate, 0)}%</td>
+                    <td data-label="Uafgjort">{r.ties}</td><td data-label="Winrate">
+                      <div className={styles.winrateVisual}>
+                        <strong>{num(first ? r.player_1_win_rate : r.player_2_win_rate, 0)}%</strong>
+                        <span className={styles.winrateTrack} aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(100, (first ? r.player_1_win_rate : r.player_2_win_rate) ?? 0))}%` }} /></span>
+                      </div>
+                    </td>
                   </tr>;
                 })}</tbody>
               </table></div> : <p className={styles.muted}>Ingen direkte opg&#xF8;r i det valgte filter.</p>}
