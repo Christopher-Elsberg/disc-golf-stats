@@ -138,3 +138,113 @@
   color: var(--text);
   font-size: .86rem;
 }
+
+
+/* Aligned profile headings and a short introduction above every tab. */
+.profileHeader {
+  border: 1px solid #d6e6d9;
+  border-radius: 16px;
+  background: linear-gradient(120deg, #f6faf6, #eaf4ec);
+  padding: 17px 20px;
+  box-shadow: 0 5px 20px rgba(24,64,37,.04);
+}
+.profileHeader h2 { color: #173f2a; letter-spacing: -.025em; }
+.tabDescription {
+  margin: 0;
+  padding: 12px 15px;
+  border: 1px solid #dce9dd;
+  border-left: 4px solid #5a9d73;
+  border-radius: 11px;
+  background: #f8fbf8;
+  color: #4f6455;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+.section > h3 {
+  color: #1d5035;
+  letter-spacing: -.017em;
+}
+.section > h3::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 17px;
+  background: #5b9c70;
+  vertical-align: -3px;
+  border-radius: 99px;
+  margin-right: 9px;
+}
+
+/* Compact desktop data tables, with clear headers and gentle row contrast. */
+.tableScroll { border-radius: 13px; }
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border: 1px solid #d9e6db;
+  border-radius: 13px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  font-size: .84rem;
+}
+.table th, .table td { padding: 11px 12px; border-bottom-color: #e5ebe4; }
+.table thead th {
+  background: #eaf3ec;
+  color: #27573b;
+  font-size: .74rem;
+  font-weight: 800;
+  opacity: 1;
+  letter-spacing: .025em;
+  border-bottom: 1px solid #d8e7db;
+}
+.table tbody th { font-weight: 750; color: #244d35; }
+.table tbody td { font-weight: 600; }
+.table tbody tr:nth-child(even) { background: #f9fbf8; }
+.table tbody tr:hover { background: #f0f7f0; }
+.table tbody tr:last-child td,
+.table tbody tr:last-child th { border-bottom: 0; }
+.metricPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px solid #cfe7d4;
+  background: #e9f5ec;
+  border-radius: 99px;
+  color: #1d7140;
+  font-weight: 850;
+  font-size: .84rem;
+}
+.winrateVisual { display: grid; gap: 6px; justify-items: start; min-width: 76px; }
+.winrateVisual strong { color: #20683c; font-weight: 850; }
+.winrateTrack {
+  display: block;
+  width: 100%;
+  max-width: 95px;
+  height: 5px;
+  background: #dce8dc;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.winrateTrack > span { display: block; height: 100%; background: linear-gradient(90deg,#70bb87,#298153); border-radius: inherit; }
+
+@media (max-width: 700px) {
+  .profileHeader { padding: 12px; }
+  .tabDescription { padding: 10px 12px; font-size: .78rem; line-height: 1.45; }
+  .mobileCards { border: 0; background: transparent; border-radius: 0; overflow: visible; }
+  .mobileCards tbody tr {
+    background: #fff !important;
+    border-color: #dbe8dc;
+    padding: 10px;
+    box-shadow: 0 2px 8px rgba(24,64,37,.035);
+  }
+  .mobileCards tbody tr:nth-child(even) { background: #f8faf7 !important; }
+  .mobileCards tbody td { padding: 7px 3px; font-size: .87rem; }
+  .mobileCards tbody td[data-label="Rating"],
+  .mobileCards tbody td[data-label="Winrate"] {
+    background: #e9f5ec;
+    border-radius: 9px;
+    padding: 8px;
+  }
+  .winrateVisual { min-width: 0; width: 100%; }
+}
