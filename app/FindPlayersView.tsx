@@ -40,7 +40,7 @@ function date(value: string): string {
 }
 
 const PROFILE_TAB_DESCRIPTIONS: Record<string, string> = {
-  "profile-overview": "Et samlet indblik i spillerens rating, resultater og stabilitet.",
+  "profile-overview": "Et samlet indblik i rating, resultater og stabilitet. Stabilitet beskriver variationen i runderatings; jo lavere, desto mere ensartet spil.",
   "profile-recent": "De nyeste scorekort og runder, samlet med bane, score og rating.",
   "profile-allrounds": "Hele spillerens rundehistorik, s\u00e5 du kan f\u00f8lge udviklingen over tid.",
   "profile-scorecards": "Se slagene hul for hul i de seneste spillede runder.",
@@ -469,15 +469,6 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
                 ["Stabilitet (rating)", num(p.consistency_sd_rating)],
               ].map(([label, value]) => <div key={label} className={styles.kpi}><span>{label}</span><strong>{value}</strong></div>)}
             </div>
-            {profileTab === "profile-overview" ? (
-              <p className={styles.muted}>
-                Stabilitet er standardafvigelsen af runderatings i det valgte filter.
-                {" "}{p.consistency_rated_rounds_used < 2
-                  ? "Kr\u00e6ver mindst to ratede runder."
-                  : `Beregnet p\u00e5 ${p.consistency_rated_rounds_used} ratede runder. Lavere tal betyder mere stabilt spil.`}
-              </p>
-            ) : null}
-
             <Box id="profile-recent" hidden={profileTab !== "profile-recent"} title="Seneste runder">
               {recent.length ? <div className={styles.tableScroll}><table className={`${styles.table} ${styles.mobileCards}`}>
                 <thead><tr><th>Runde</th><th>Dato</th><th>Bane</th><th>Slag</th><th>Vs. par</th><th>Rating</th></tr></thead>
