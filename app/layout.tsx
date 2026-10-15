@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ServiceWorkerRegister from "./service-worker-register";
+import PasswordRecoveryRedirect from "./password-recovery-redirect";
 
 export const metadata: Metadata = {
   title: "Disc Golf Stats",
@@ -29,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="da">
       <body>
+        <PasswordRecoveryRedirect />
         {children}
         <ServiceWorkerRegister />
       </body>
