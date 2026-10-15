@@ -854,7 +854,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
               <span>Spillere</span>
               <strong>{selectedPlayerRows.length} valgt</strong>
             </div>
-            <small>{isAdmin ? "Admin: Du kan v&#xE6;lge alle aktive spillere." : "Du kan kun v&#xE6;lge dig selv og accepterede venner."}</small>
+            <small>{isAdmin ? "Admin: Du kan vælge alle aktive spillere." : "Du kan kun vælge dig selv og accepterede venner."}</small>
           </div>
 
           <div className="player-picker">
