@@ -1279,7 +1279,7 @@ export default function HomePage() {
                     <strong>{formatNumber(myStats?.player?.consistency_sd_rating)}</strong>
                     <small>{(myStats?.player?.consistency_rated_rounds_used ?? 0) < 2
                       ? "Kr\u00e6ver mindst 2 ratede runder"
-                      : `${myStats?.player?.consistency_rated_rounds_used} ratede runder; lavere = mere stabil`}</small>
+                      : "Spredning i runderatings; lavere er mere stabilt"}</small>
                   </article>
                 </div>
 
