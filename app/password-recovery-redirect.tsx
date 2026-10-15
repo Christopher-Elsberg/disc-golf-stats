@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { RECOVERY_REDIRECT_FLAG, supabase } from "@/lib/supabase";
 
 /**
  * A Supabase recovery email may redirect to the Site URL ("/") when
@@ -13,9 +13,21 @@ export default function PasswordRecoveryRedirect() {
     if (window.location.pathname !== "/") return;
 
     let navigating = false;
+    let pendingRecovery = false;
+    try {
+      const started = Number(window.sessionStorage.getItem(RECOVERY_REDIRECT_FLAG) ?? "0");
+      pendingRecovery = started > 0 && Date.now() - started < 120000;
+    } catch {
+      // Storage can be unavailable in strict browser privacy modes.
+    }
     const navigate = (destination: string) => {
       if (navigating) return;
       navigating = true;
+      try {
+        window.sessionStorage.removeItem(RECOVERY_REDIRECT_FLAG);
+      } catch {
+        // Navigating is still possible without session storage.
+      }
       window.location.replace(destination);
     };
 
@@ -34,7 +46,7 @@ export default function PasswordRecoveryRedirect() {
       }
     });
 
-    if (isRecoveryLink) {
+    if (isRecoveryLink || pendingRecovery) {
       const originalLink = "/reset-password" + window.location.search + window.location.hash;
       // Wait until Supabase has processed its callback and stored the session.
       void supabase.auth.getSession().then(({ data }) => {
