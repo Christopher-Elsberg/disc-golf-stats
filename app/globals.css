@@ -1611,3 +1611,139 @@ select:focus-visible {
 .incomplete-details li { overflow-wrap: anywhere; }
 .incomplete-details li strong,.incomplete-details li span { display: block; }
 .incomplete-details li span { margin-top: 3px; font-size: .8rem; }
+
+
+/* Editorial page headers: descriptive, screen-width-aware and not data-bound. */
+.topbar {
+  background: linear-gradient(115deg, rgba(245,250,245,.97), rgba(239,246,240,.96));
+  border-bottom-color: #d7e4d9;
+  align-items: center;
+}
+.topbar-title { flex: 1 1 auto; min-width: 0; align-items: flex-start; gap: 14px; }
+.topbar-title > div { min-width: 0; }
+.topbar-title .eyebrow { color: var(--forest-3); }
+.topbar h1 { color: var(--forest); line-height: 1.12; }
+.topbar-description {
+  margin: 8px 0 0;
+  max-width: 65ch;
+  color: #54675a;
+  font-size: .85rem;
+  line-height: 1.55;
+  font-weight: 450;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.filters { flex: 0 0 auto; }
+.filters label { font-size: .78rem; }
+
+/* Consistent visual rhythm for all content headings. */
+.panel-heading {
+  background: linear-gradient(120deg, #fbfdfa 0%, #f4f8f4 100%);
+  border-bottom-color: #e4ebe3;
+  align-items: center;
+}
+.panel-heading > div { min-width: 0; }
+.panel-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--forest);
+  line-height: 1.26;
+}
+.panel-heading h2::before {
+  content: "";
+  flex: 0 0 4px;
+  align-self: stretch;
+  min-height: 20px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #54a672, #2d7851);
+}
+.panel-heading p { max-width: 74ch; color: #647568; }
+
+/* Distinctive but restrained score tables. Preserve tabular semantics. */
+.panel > .table-scroll { padding: 14px 18px 20px; }
+.stats-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #dae7dc;
+  border-radius: 14px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  background: #fff;
+}
+.stats-table thead th {
+  background: #eaf2eb;
+  color: #24563a;
+  border-bottom: 1px solid #d2e3d5;
+  letter-spacing: .04em;
+  font-weight: 800;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.stats-table thead th + th { border-left: 1px solid rgba(214,227,215,.65); }
+.stats-table tbody tr:nth-child(even) { background: #f8faf7; }
+.stats-table tbody tr:hover { background: #edf6ee; }
+.stats-table tbody th {
+  color: #244b35;
+  font-weight: 750;
+  letter-spacing: -.01em;
+}
+.stats-table tbody td { font-weight: 600; }
+.stats-table tbody td[data-label="Rating"],
+.stats-table tbody td[data-label="Winrate"] { font-weight: 850; color: var(--forest-2); }
+.stats-table .total-row,
+.stats-table .score-total-row { background: #e9f5e9 !important; }
+.stats-table .total-row th,
+.stats-table .total-row td { font-weight: 850; color: #1e5939; }
+
+.rate-visual { display: grid; justify-items: center; gap: 6px; min-width: 74px; }
+.rate-visual strong {
+  color: var(--forest-2);
+  font-size: .94rem;
+  font-weight: 850;
+}
+.rate-track { display: block; width: min(94px,100%); height: 5px; border-radius: 99px; background: #dbe8dd; overflow: hidden; }
+.rate-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6db98b, #288653); }
+
+/* Score entry keeps the same form fields but gains table polish. */
+.score-entry-table tbody th { background: #f3f8f3; }
+.score-entry-table tbody tr:nth-child(even) th { background: #edf5ed; }
+.score-entry-table .score-input { border-color: #c9dbcc; box-shadow: 0 1px 2px rgba(26,60,37,.04); }
+.score-entry-table .score-input:focus { border-color: #3b9464; outline: 3px solid rgba(61,151,95,.12); }
+
+@media (max-width: 860px) {
+  .topbar { align-items: flex-start; }
+  .topbar-description { max-width: 56ch; font-size: .81rem; }
+}
+@media (max-width: 650px) {
+  .topbar { gap: 11px; }
+  .topbar-title { gap: 9px; width: 100%; }
+  .topbar h1 { margin-top: 3px; }
+  .topbar-description { margin-top: 5px; font-size: .77rem; line-height: 1.48; }
+  .filters { flex: 1 1 auto; }
+  .panel > .table-scroll { padding: 9px 10px 12px; }
+  .stats-table.mobile-stat-cards {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+  }
+  .mobile-stat-cards tbody tr {
+    background: #fff !important;
+    border-color: #dce9dd;
+    box-shadow: 0 2px 8px rgba(18,64,35,.035);
+    padding: 10px 12px;
+  }
+  .mobile-stat-cards tbody tr:nth-child(even) { background: #f7faf6 !important; }
+  .mobile-stat-cards tbody th { color: var(--forest); border-bottom-color: #deebdf; }
+  .mobile-stat-cards tbody td { font-weight: 750; }
+  .mobile-stat-cards tbody td[data-label="Rating"],
+  .mobile-stat-cards tbody td[data-label="Winrate"] {
+    background: #e9f4ec !important;
+    padding: 8px;
+    border-radius: 9px;
+  }
+  .rate-visual { justify-items: start; min-width: 0; width: 100%; }
+  .rate-track { width: min(115px,100%); }
+}
