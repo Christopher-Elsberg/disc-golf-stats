@@ -706,8 +706,8 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
       <section className="panel round-setup-panel">
         <div className="panel-heading">
           <div>
-            <h2>Opret ny runde</h2>
-            <p>V&#xE6;lg en eksisterende bane eller opret en ny bane, mens I spiller.</p>
+            <h2>Rundeops&#xE6;tning</h2>
+            <p>V&#xE6;lg en bane og deltagere, inden du begynder at registrere scorerne.</p>
           </div>
         </div>
 
@@ -904,7 +904,7 @@ export default function NewRoundView({ currentUserId, active, onQueued, onOpenFr
       <section className="panel score-entry-panel">
         <div className="panel-heading score-entry-heading">
           <div>
-            <h2>Scorekort</h2>
+            <h2>Slag for hvert hul</h2>
             <p>
               {isNewCourse
                 ? "N\u00e5r du tilf\u00f8jer et nyt hul ovenfor, dukker det straks op her."
