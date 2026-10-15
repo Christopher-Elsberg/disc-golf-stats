@@ -55,6 +55,21 @@ const STATS_MENU: Array<{ id: StatsTab; label: string; icon: string }> = [
 ];
 
 
+const VIEW_DESCRIPTIONS: Record<View, string> = {
+  newround: "Registrer en runde fra start til slut. V\u00e6lg bane og medspillere, og indtast slagene hul for hul.",
+  myoverview: "Et samlet billede af dit spil: rating, handicap, resultater og stabilitet. F\u00e5 hurtigt overblik over dine styrker og din udvikling.",
+  profiles: "Find andre spillere, administrer venskaber, og udforsk deres pr\u00e6stationer og resultater.",
+  courses: "Hold banernes oplysninger, par, hulr\u00e6kkef\u00f8lge og ratingformler opdaterede.",
+  scorecards: "Gense dine seneste scorekort og f\u00f8lg, hvor slagene bliver vundet eller tabt p\u00e5 hvert hul.",
+  headtohead: "Sammenlign dine direkte opg\u00f8r med de spillere, du har delt runder med.",
+  shots: "Se fordelingen af birdies, bogeys og andre resultater for at finde m\u00f8nstre i dit spil.",
+  frontback: "Sammenlign din pr\u00e6station p\u00e5 banens to halvdele. Hvor starter du st\u00e6rkt, og hvor taber du slag?",
+  best: "Find din st\u00e6rkeste runde, vurderet efter h\u00f8jeste runderating p\u00e5 tv\u00e6rs af baner.",
+  holes: "G\u00e5 i dybden med hvert hul og se, hvor du typisk pr\u00e6sterer bedst, og hvor der er plads til forbedring.",
+  bestworst: "Opdag hvilke huller der oftest er dine styrker, og hvilke der koster flest slag i forhold til par.",
+  rating: "F\u00f8lg din rating fra runde til runde, og se hvordan dit spil udvikler sig over tid.",
+};
+
 function formatNumber(value: number | null | undefined, digits = 1) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "\u2013";
   return value.toFixed(digits).replace(".", ",");
@@ -1101,6 +1116,7 @@ export default function HomePage() {
                       : activeCourseName}
               </span>
               <h1>{activeMenu}</h1>
+              <p className="topbar-description">{VIEW_DESCRIPTIONS[view]}</p>
             </div>
           </div>
 
@@ -1266,24 +1282,14 @@ export default function HomePage() {
                       : `${myStats?.player?.consistency_rated_rounds_used} ratede runder; lavere = mere stabil`}</small>
                   </article>
                 </div>
-                <Panel
-                  title="Mit overblik"
-                  subtitle="Her ser du kun dine samlede n&#xF8;gletal. V&#xE6;lg Mine stats i menuen for scorecards, head-to-head, slagtyper, huller og ratingudvikling."
-                >
-                  <p>{currentPlayer?.name ?? "Spiller"} &#xB7; {activeCourseName}</p>
-                  {myStats?.player ? (
-                    <p>Din statistik er baseret p&#xE5; {myStats.player.rounds_played} komplette runder i det valgte filter.</p>
-                  ) : (
-                    <EmptyState>Ingen komplette runder i dette filter. Pr&#xF8;v en anden bane eller s&#xE6;son.</EmptyState>
-                  )}
-                </Panel>
+
               </>
             ) : null}
 
             {view === "scorecards" ? (
               <Panel
                 title="Mine fem seneste scorecards"
-                subtitle={"Sorteret efter round_number, s\u00e5 historiske Last Modified-datoer ikke \u00e6ndrer r\u00e6kkef\u00f8lgen."}
+                subtitle={"Se hullernes scorer og din score i forhold til par. Nyeste runder vises f\u00f8rst."}
               >
                 {personalStats!.stats.last_five_scorecards.length === 0 ? (
                   <EmptyState>Ingen scorecards i det valgte filter.</EmptyState>
@@ -1299,7 +1305,7 @@ export default function HomePage() {
 
             {view === "headtohead" ? (
               <Panel title="Mit head-to-head"
-                subtitle="Dine direkte opg&#xF8;r mod andre spillere. Solo-runder t&#xE6;ller ikke.">
+                subtitle="Her kan du se antal opg&#xF8;r, sejre, nederlag og sejrsprocent mod hver modstander.">
                 {!myStats || myStats.headToHead.length === 0 ? (
                   <EmptyState>Ingen head-to-head-data i det valgte filter.</EmptyState>
                 ) : (
@@ -1313,7 +1319,14 @@ export default function HomePage() {
                         <tr key={row.opponent_id}>
                           <th>{row.opponent_name}</th><td data-label="Kampe">{row.games}</td>
                           <td data-label="Sejre">{row.wins}</td><td data-label="Nederlag">{row.losses}</td>
-                          <td data-label="Uafgjort">{row.ties}</td><td data-label="Winrate" className="rating-cell">{formatPercent(row.win_rate)}</td>
+                          <td data-label="Uafgjort">{row.ties}</td><td data-label="Winrate" className="rating-cell">
+                            <div className="rate-visual">
+                              <strong>{formatPercent(row.win_rate)}</strong>
+                              <span className="rate-track" aria-hidden="true">
+                                <span style={{ width: `${Math.max(0, Math.min(100, row.win_rate ?? 0))}%` }} />
+                              </span>
+                            </div>
+                          </td>
                         </tr>
                       ))}</tbody>
                     </table>
@@ -1325,7 +1338,7 @@ export default function HomePage() {
             {view === "shots" ? (
               <Panel
                 title="Mine slagtyper"
-                subtitle="Andel af alle spillede huller i det valgte filter."
+                subtitle="Se b&#xE5;de andelen og antallet af de forskellige resultater p&#xE5; dine spillede huller."
               >
                 <div className="table-scroll">
                   <table className="stats-table mobile-stat-cards">
@@ -1378,7 +1391,7 @@ export default function HomePage() {
                   personalStats!.stats.front_back.map((course) => (
                     <Panel
                       key={course.course_id}
-                      title={`Clutch or crumble \u00b7 ${course.course_name}`}
+                      title={`Forreste og bagerste halvdel \u00b7 ${course.course_name}`}
                       subtitle={"Gennemsnitlig score mod par p\u00e5 banens f\u00f8rste og sidste halvdel."}
                     >
                       <div className="table-scroll">
@@ -1454,7 +1467,7 @@ export default function HomePage() {
                     <Panel
                       key={course.course_id}
                       title={`Hulgennemsnit \u00b7 ${course.course_name}`}
-                      subtitle={"Hver celle viser gennemsnit af spillerens sidste 5 runder p\u00e5 banen / bedste score nogensinde."}
+                      subtitle={"Se din gennemsnitlige score p\u00e5 hvert hul og den bedste score, du har opn\u00e5et."}
                     >
                       <div className="table-scroll">
                         <table className="stats-table hole-table mobile-stat-cards">
@@ -1528,7 +1541,7 @@ export default function HomePage() {
             {view === "rating" ? (
               <Panel
                 title="Min rating progression"
-                subtitle={"Historikken f\u00f8lger round_number, s\u00e5 runde 1 \u2192 2 \u2192 3 altid er den rigtige r\u00e6kkef\u00f8lge."}
+                subtitle={"Kurven viser runderatings i spille-r\u00e6kkef\u00f8lge og g\u00f8r dine fremskridt og udsving synlige."}
               >
                 <div className="chart-grid">
                   {personalStats!.stats.rating_history.map((item) => (
