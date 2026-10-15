@@ -338,8 +338,8 @@ export default function EditCoursesView({ onSaved }: Props) {
       <section className={`panel ${styles.panel}`}>
         <div className="panel-heading">
           <div>
-            <h2>Rediger baner</h2>
-            <p>Ret baneinfo, ratingformel, par, hulnavne og r&#xE6;kkef&#xF8;lge.</p>
+            <h2>V&#xE6;lg en bane</h2>
+            <p>V&#xE6;lg den bane, du vil vedligeholde. Layout&#xE6;ndringer gemmes som en ny version.</p>
           </div>
         </div>
 
@@ -382,7 +382,7 @@ export default function EditCoursesView({ onSaved }: Props) {
           <section className={`panel ${styles.panel}`}>
             <div className="panel-heading">
               <div>
-                <h2>Ratingformel</h2>
+                <h2>Rundernes rating</h2>
                 <p>Efterlad feltet tomt, hvis runder p&#xE5; banen ikke skal have rating.</p>
               </div>
             </div>
@@ -420,7 +420,7 @@ export default function EditCoursesView({ onSaved }: Props) {
           <section className={`panel ${styles.panel}`}>
             <div className="panel-heading">
               <div>
-                <h2>Aktivt banelayout</h2>
+                <h2>Huller og par</h2>
                 <p>En &#xE6;ndring af huller, par eller r&#xE6;kkef&#xF8;lge opretter automatisk en ny layout-version.</p>
               </div>
               <div className={styles.parBadge}>Par {coursePar}</div>
