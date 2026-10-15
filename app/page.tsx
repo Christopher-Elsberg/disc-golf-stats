@@ -1152,7 +1152,7 @@ export default function HomePage() {
         {!isOnline ? (
           <div className="connection-banner offline">
             <strong>&#x25CF; Offline</strong>
-            <span>Du kan stadig gemme runder. De bliver lagt i kø; på; telefonen.</span>
+            <span>Du kan stadig gemme runder. De bliver lagt i kø på telefonen.</span>
           </div>
         ) : null}
 
