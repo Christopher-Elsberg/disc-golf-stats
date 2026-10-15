@@ -1,4 +1,4 @@
-const CACHE_NAME = "disc-golf-stats-v5";
+const CACHE_NAME = "disc-golf-stats-v6";
 
 const APP_SHELL = [
   "/",
@@ -34,6 +34,24 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  // Do not serve cached pages for password-reset links or callback URLs.
+  if (url.pathname.startsWith("/reset-password")) return;
+  if (url.pathname === "/" && (url.searchParams.has("token_hash") || url.searchParams.get("type") === "recovery" || url.searchParams.has("error"))) return;
+
+  // Next.js JavaScript/CSS are fingerprinted assets. Prefer the deployed
+  // bundle to avoid retaining an obsolete password-reset handler in the PWA.
+  if (url.pathname.startsWith("/_next/")) {
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)));
+        }
+        return response;
+      }).catch(async () => (await caches.match(request)) || Response.error()),
+    );
+    return;
+  }
 
   if (request.mode === "navigate") {
     event.respondWith(
