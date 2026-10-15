@@ -298,15 +298,15 @@ export default function FindPlayersView({ currentPlayerId, season, courseId, onR
     <div className={styles.root}>
       <section className={styles.section}>
         <div className={styles.headerRow}>
-          <h2>Find spillere og venner</h2>
+          <h2>S&#xF8;g efter spillere</h2>
           <button type="button" className={styles.refreshButton}
             onClick={() => void refreshRelationships().catch((err) => setError(String(err)))}>
             Opdater anmodninger
           </button>
         </div>
         <p className={styles.muted}>
-          S&#xF8;g efter spillere, send en venneanmodning, og se alle stats n&#xE5;r I er venner.
-          {isAdmin ? " Som admin kan du se alle profiler." : ""}
+          Find spillere, du gerne vil f&#xF8;lge. Accepterede venner kan dele statistik og spille runder sammen.
+          {isAdmin ? " Administratorer kan se alle spillerprofiler." : ""}
         </p>
         {incoming.length > 0 ? (
           <div className={styles.requests}>
